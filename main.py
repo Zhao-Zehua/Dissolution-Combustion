@@ -1,86 +1,71 @@
+# Author: 赵泽华
+'''
+
+快速启动:
+    运行"main-win.exe"或"main-mac.app"即可自动运行main.py
+    如出现异常情况，尝试运行"requirements-win.exe"或"requirements-mac.app"安装或更新依赖库
+    main-win/mac需要与main.py在同一目录下，requirements-win/mac需要与requirements.txt在同一目录下
+
+图形界面的可调参数:
+    dx: 积分、绘图步长
+    time_interval: 记录数据间隔，单位毫秒
+    plot_max_points: 绘图最大点数
+    port_timeout: 串口超时时间，单位秒
+    std_limit: 自动寻找平台期的标准差阈值
+    time_lower_limit: 自动寻找平台期的最小时间窗口
+    time_upper_limit: 自动寻找平台期的最大时间窗口
+    width_height_inches: 保存图片尺寸，单位英尺
+    dpi: 保存图片DPI
+
+内置库:
+    csv
+    os
+    re
+    sys
+    shutil
+    time
+    tkinter
+
+第三方库:
+    在命令行中运行pip install -r requirements.txt --upgrade安装或更新以下库
+    func_timeout
+    matplotlib
+    numpy
+    Pillow
+    pyserial
+    scipy
+    ttkbootstrap
+
+自建库:
+    expserial               (Author: 安孝彦)    # 串口通信
+    gui                     (Author: 赵泽华)    # 图形界面
+    maths                   (Author: 赵泽华)    # 数学计算
+    water_capacity_smooth   (Author: 赵泽华)    # 水的热容三阶插值
+    water_density_smooth    (Author: 赵泽华)    # 水的密度三阶插值
+
+
+'''
+
+# 内置库
 import os
-import time
-from threading import Thread
+import shutil
+# 自建库
+import gui
 
-from myserial import EasySerial,COMPORTS
+# 可调参数
+dx = 0.1    # 积分、绘图步长
+time_interval = 500 # 记录数据间隔，单位毫秒
+plot_max_points = 500   # 绘图最大点数
+port_timeout = 0.25 # 串口超时时间，单位秒
+std_limit = 0.005   # 自动寻找平台期的标准差阈值
+time_lower_limit = 30   # 自动寻找平台期的最小时间窗口
+time_upper_limit = 40   # 自动寻找平台期的最大时间窗口
+width_height_inches = (10, 6)   # 保存图片尺寸，单位英尺
+dpi = 600   # 保存图片DPI
 
-class Measure:
-    def __init__(self,port_name,internal=0):
-        self.port_name=port_name
-        self.internal=internal
-        self.read_thread:Thread=None
-        self.read_active=False
-        self.tmp_file_path="latest.tmp"
-        self.reset()
-
-    def _read_into_result(self):
-        try:
-            end_time,dT=self._port.read()
-            dt=end_time-self.start_time
-            self.result.append((dt,dT,0))
-            self.tmp_file.write(f"{dt:.3f},\t\t{dT:.3f},\t\t0\n")
-        except BufferError as e:
-            "连接已断开！请检查物理线缆连接！"
-            self.read_active=False
-        except IOError as e:
-            "状态错误！请断开重连！"
-            self._port.close()
-            self._port.open()
-    
-    def _read_into_result_looping(self):
-        while self.read_active:
-            self._read_into_result()
-            time.sleep(self.internal)
-
-    def reset(self):
-        self.result=[] # 测量时间 测量值 注释
-        self._port=None
-        if self.read_thread is not None:
-            self.read_active=False
-            while not self.read_thread.is_alive():
-                pass
-        self.read_active=False
-        self.read_thread=None
-        self.start_time=0
-        self.tmp_file=None
-    
-    def start(self):
-        assert self.tmp_file is None
-        assert self.read_thread is None
-        self.read_active=True
-        self.tmp_file=open(self.tmp_file_path,"w",encoding="utf-8")
-        self.start_time=time.time()
-        self._port=EasySerial(self.port_name)
-        try:
-            self._port.open()
-        except FileNotFoundError as e:
-            "未知端口名！请检查线缆是否正确连接！"
-            raise e
-        except PermissionError as e:
-            "端口被占用！请查找可能占用端口的程序！"
-            raise e
-        self.read_thread=Thread(target=self._read_into_result_looping)
-        self.read_thread.daemon=True
-        self.read_thread.start()
-
-    def stop(self):
-        assert self.read_thread is not None
-        self.read_active=False
-        while not self.read_thread.is_alive():
-            pass
-        self.tmp_file.close()
-        self._port.close()
-
-    def saveCSV(self,path):
-        with open(path,"w",encoding="utf-8") as f:
-            f.write("时间/s,\t温差/K,\t标记\n")
-            for dt,dT,comment in self.result:
-                f.write(f"{dt:.3f},\t\t{dT:.3f},\t\t{comment}\n")
-
-    
-if __name__=="__main__":
-    task=Measure("COM22",1)
-    task.start()
-    time.sleep(5)
-    task.stop()
-    task.saveCSV("./test.csv")
+if __name__ == "__main__":
+    gui.Dissolution_Combustion(dx, time_interval, plot_max_points, port_timeout, std_limit, time_lower_limit, time_upper_limit, width_height_inches, dpi)
+    # 清除缓存文件夹
+    pycache_dir = os.path.dirname(os.path.abspath(__file__)) + '/__pycache__'
+    if os.path.exists(pycache_dir):
+        shutil.rmtree(pycache_dir)

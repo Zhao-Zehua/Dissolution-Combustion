@@ -1,7 +1,32 @@
+# Author: 赵泽华
+# 第三方库
 import numpy as np
+from scipy import optimize
 from scipy.interpolate import BSpline, splrep
 
 # 线性回归
+# 使用scipy
+def linear_regression(csv, Start: int, End: int):
+    def equation(x, k, b):
+        return k * x + b
+    End += 1    # 植树问题，输入的起止点为闭区间
+    N = End - Start # 散点总数
+    x = csv[Start : End, 0] # 获取散点横坐标，左闭右开
+    y = csv[Start : End, 1] # 获取散点纵坐标，左闭右开
+    popt, pcov = optimize.curve_fit(equation, x, y)    # popt为最优拟合参数，pcov为拟合参数的协方差矩阵
+    perr = np.sqrt(np.diag(pcov))   # perr为拟合参数的标准差
+    k, b = popt
+    stddev_k, stddev_b = perr
+    # 计算拟合曲线的R平方
+    residuals = y - equation(x, *popt)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y - np.mean(y)) ** 2)
+    r_square = 1 - (ss_res / ss_tot)
+    return k, b, stddev_k, stddev_b, r_square
+
+'''
+# 线性回归
+# 由数学定义计算
 def linear_regression(csv, Start: int, End: int):
     End += 1    # 植树问题，输入的起止点为闭区间
     N = End - Start # 散点总数
@@ -9,22 +34,22 @@ def linear_regression(csv, Start: int, End: int):
     y = csv[Start : End, 1] # 获取散点纵坐标，左闭右开
     k = (np.sum(x * y) - np.sum(x) * np.sum(y) / N) / (np.sum(np.power(x, 2)) - (np.sum(x)) ** 2 / N)   # 回归直线的斜率
     b = (np.sum(y) - k * np.sum(x)) / N # 回归直线的截距
-    # 以下是用来计算标准差的，注释掉是因为没有用
-    # Sxx = np.sum(np.power(x, 2)) - np.sum(x) ** 2 / N # x的总离差平方和
+    Sxx = np.sum(np.power(x, 2)) - np.sum(x) ** 2 / N # x的总离差平方和
     Syy = np.sum(np.power(y, 2)) - np.sum(y) ** 2 / N   # y的总离差平方和
-    # sr = np.sqrt((Syy - k ** 2 * Sxx) / (N - 2))  # 回归标准差
-    # stddev_k = np.sqrt(sr ** 2 / Sxx) # 斜率标准差
-    # stddev_b = sr * np.sqrt(1 / (N - np.sum(x) ** 2 / np.sum(np.power(x, 2))))    # 截距标准差
+    sr = np.sqrt((Syy - k ** 2 * Sxx) / (N - 2))  # 回归标准差
+    stddev_k = np.sqrt(sr ** 2 / Sxx) # 斜率标准差
+    stddev_b = sr * np.sqrt(1 / (N - np.sum(x) ** 2 / np.sum(np.power(x, 2))))    # 截距标准差
     r_square = np.sum(np.power((x * k + b - np.mean(y)), 2)) / Syy  # r^2
-    return k, b, r_square
+    return k, b, stddev_k, stddev_b, r_square
+'''
 
 # 定积分
 def integration(x, y, k, b, dx):
-    dS = (y - k * x - b) * dx - k * dx * dx * 0.5  # 定积分，得到的面积有符号
-    return dS    # 返回积分结果
+    dS = abs((y - k * x - b) * dx - k * dx * dx * 0.5)  # 定积分，得到绝对面积
+    return dS   # 返回积分结果
 
 # B-样条平滑曲线
-def B_Spline(x, y, dx): # 平滑步长dx默认为0.005
+def B_Spline(x, y, dx): # 平滑步长dx
     # 计算B-样条的节点和系数
     t, c, k = splrep(x, y)
     # 创建平滑函数
@@ -32,7 +57,7 @@ def B_Spline(x, y, dx): # 平滑步长dx默认为0.005
     return smooth   # 返回平滑函数
 
 # 雷诺校正点
-def Reynolds(csv, Start1: int, End1: int, Start2: int, End2: int, dx: float):  # 积分步长dx默认为0.005
+def Reynolds(csv, Start1: int, End1: int, Start2: int, End2: int, dx: float):  # 积分步长dx
     # 依据起止点进行线性回归
     k1, b1 = linear_regression(csv, Start1, End1)[0 : 2]
     k2, b2 = linear_regression(csv, Start2, End2)[0 : 2]
@@ -49,11 +74,179 @@ def Reynolds(csv, Start1: int, End1: int, Start2: int, End2: int, dx: float):  #
         S[0].append(integration(x_smooth[i], y_smooth[i], k1, b1, dx))  # 以dx为步长计算第一条回归直线的定积分，存储在S[0]中
         S[1].append(integration(x_smooth[i], y_smooth[i], k2, b2, dx))  # 以dx为步长计算第二条回归直线的定积分，存储在S[1]中
     # 搜索使得两侧积分面积相等的点
-    equal_point = 0 # 初始化下标，从最左侧开始搜索
-    S_total = 0 + sum(S[1]) # 从最左侧开始搜索，此时左侧总面积为0,右侧总面积为S[1]之和，初始化总面积
-    flag = 1 if S_total > 0 else -1  # 初始化结束标志，当S_total * flag <= 0时结束搜索
-    while S_total * flag > 0:
-        S_total = S_total + S[0][equal_point] - S[1][equal_point]   # 不满足终止条件，向右移动一个点，更新总面积
-        equal_point += 1    # 下标也向右移动一个点
-    x0 = x_smooth[equal_point]  # 搜索结束，根据下标查找对应的横坐标
-    return x0, abs(S_total) # 返回横坐标和结束时的总面积，总面积越接近0越精确
+    S1, S2 = 0, sum(S[1])   # 初始化两侧积分面积
+    equal_point = 0
+    for i in range(len_smooth):
+        S1 += S[0][i]
+        S2 -= S[1][i]
+        if S1 >= S2:
+            equal_point = i
+            break
+    x0 = x_smooth[equal_point]  # 获取雷诺校正点横坐标
+    return x0, S1, S2
+
+# 溶解热计算
+def calculate_dissolution(parameters: list):
+    '''
+    从图形界面获取参数
+    parameters = [file_name_extension, Start1, End1, Start2, End2, Start3, End3, T1_left, T1_right, T2_left, T2_right, temperature, water_volume, water_density, water_capacity, solute_mass, solute_molarmass, R1, R2, t1, t2, current, dissolution_heat]
+    '''
+    # 获取参数
+    try:
+        T1_left = float(parameters[7])
+        T1_right = float(parameters[8])
+        T2_left = float(parameters[9])
+        T2_right = float(parameters[10])
+        R1 = float(parameters[17])
+        R2 = float(parameters[18])
+        t1 = float(parameters[19])
+        t2 = float(parameters[20])
+        current = float(parameters[21])
+    except ValueError:
+        pass
+    # 计算溶解热
+    R = (R1 + R2) / 2
+    t = t2 - t1
+    Q = current ** 2 * R * t
+    dissolution_heat = Q * (T1_left - T1_right) / (T2_right - T2_left) / 1000   # 单位：kJ
+    parameters[-1] = f"{dissolution_heat:.4f}"
+    return parameters
+
+# 溶解热回归
+def dissolution_heat_regression(dissolution_csv):
+    '''
+    从图形界面获取参数
+    dissolution_csv = [[water_volume, water_density, solute_mass, solute_molarmass, dissolution_heat], ...]
+
+    需要计算的是水的物质的量n1、溶质的逐级物质的量sum_n2、物质的量浓度n、逐级溶解热sum_Q、积分溶解热Qs
+    公式：
+    n1 = ρV / 18.015
+    n = n1 / sum_n2
+    Qs = sum_Q / sum_n2
+    '''
+    def equation(n, Qs0, a):
+        return (Qs0 * a * n) / (1 + a * n)
+    n = []
+    Qs = []
+    sum_n2 = 0
+    sum_Q = 0
+    water_volume = float(dissolution_csv[0][0])
+    water_density = float(dissolution_csv[0][1])
+    water_molarmass = 18.015
+    n1 = water_density * water_volume / water_molarmass
+    for i in range(len(dissolution_csv)):
+        solute_mass = float(dissolution_csv[i][2])
+        solute_molarmass = float(dissolution_csv[i][3])
+        sum_n2 += solute_mass / solute_molarmass
+        Q = float(dissolution_csv[i][4])
+        sum_Q += Q
+        n.append(n1 / sum_n2)
+        Qs.append(sum_Q / sum_n2)
+    popt, pcov = optimize.curve_fit(equation, n, Qs, p0 = [20, 0.2])    # popt为最优拟合参数，pcov为拟合参数的协方差矩阵
+    perr = np.sqrt(np.diag(pcov))   # perr为拟合参数的标准差
+    Qs0, a = popt
+    stddev_Qs0, stddev_a = perr
+    # 将n和Qs转换为numpy的array
+    n = np.array(n)
+    Qs = np.array(Qs)
+    # 计算拟合曲线的R平方
+    residuals = Qs - equation(n, *popt)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((Qs - np.mean(Qs)) ** 2)
+    r_square = 1 - (ss_res / ss_tot)
+    return Qs, n, Qs0, a, stddev_Qs0, stddev_a, r_square
+
+# 燃烧热计算
+def calculate_combustion(parameters: list, code: str):
+    '''
+    从图形界面获取参数
+    parameters = [file_name_extension, Start1, End1, Start2, End2, T_left, T_right, temperature, water_volume, water_density, water_capacity, combustible_mass, cotton_mass, Nickel_before_mass, Nickel_after_mass, benzoic_enthalpy, cotton_heat, Nickel_heat, constant, combustion_heat]
+    '''
+    # 获取参数
+    try:
+        T_left = float(parameters[5])
+        T_right = float(parameters[6])
+        temperature = float(parameters[7])
+        water_volume = float(parameters[8])
+        water_density = float(parameters[9])
+        water_capacity = float(parameters[10])
+        combustible_mass = float(parameters[11])
+        cotton_mass = float(parameters[12])
+        Nickel_before_mass = float(parameters[13])
+        Nickel_after_mass = float(parameters[14])
+        benzoic_enthalpy = float(parameters[15])
+        cotton_heat = float(parameters[16])
+        Nickel_heat = float(parameters[17])
+    except ValueError:
+        pass
+    # 计算燃烧热
+    water_total_capacity = water_volume * water_density * water_capacity    # 单位J/K
+    Q_cotton = cotton_mass * cotton_heat    # 单位J
+    Q_Nickel = (Nickel_before_mass - Nickel_after_mass) * Nickel_heat    # 单位J
+    if code == "constant":  # 计算量热计常数
+        benzoic_heat = (benzoic_enthalpy * 1000 + 0.5 * 8.3144621 * temperature) / 122.123  # 将苯甲酸的恒压燃烧热(kJ/mol)转换为恒容燃烧热(J/g)
+        Q_benzoic = (combustible_mass - cotton_mass) * benzoic_heat    # 单位J
+        Q = Q_cotton + Q_Nickel + Q_benzoic
+        constant = -Q / (T_right - T_left) - water_total_capacity
+        parameters[-2] = f"{constant:.1f}"
+    # 两种测量模式
+    # 若修改为三种，需要修改self.Frame3_Combustion, self.combustion_mode, self.remake_file, maths.calculate_combustion
+    elif code == "combustible":
+        constant = float(parameters[18])
+        Q_x = -Q_Nickel - Q_cotton - (constant + water_total_capacity) * (T_right - T_left)    # 单位J
+        combustion_heat = Q_x / (combustible_mass - cotton_mass)    # 单位J/g
+        parameters[-1] = f"{combustion_heat:.1f}"
+        '''
+    # 三种测量模式
+    # 若修改为两种，需要修改self.Frame3_Combustion, self.combustion_mode, self.remake_file, maths.calculate_combustion
+    elif code == "combustible":
+        constant = float(parameters[18])
+        Q_x = -Q_Nickel - Q_cotton - (constant + water_total_capacity) * (T_right - T_left)    # 单位J
+        combustion_heat = Q_x / (combustible_mass - cotton_mass)    # 单位J/g
+        parameters[-1] = f"{combustion_heat:.1f}"
+        '''
+    elif code == "liquid":
+        constant = float(parameters[18])
+        Q_x = -Q_Nickel - Q_cotton - (constant + water_total_capacity) * (T_right - T_left)    # 单位J
+        combustion_heat = Q_x / combustible_mass    # 单位J/g
+        parameters[-1] = f"{combustion_heat:.1f}"
+    return parameters
+
+# 寻找初始起止点
+def find_start_end_point(csv, code: str, time_lower_limit: int or float, time_upper_limit: int or float, std_limit: float): # 建议时间下限30s，时间上限40s，标准差上限0.01
+    # 第一列为index，第二列为标准差
+    standard_deviation = []
+    points = []
+    count = 4 if code == "combustion" else 6
+    platform = True
+    start_index = 0
+    end_index = 1
+    while end_index < len(csv):
+        time_range = csv[end_index][0] - csv[start_index][0]
+        if time_range > time_upper_limit:
+            start_index += 1
+        elif time_range < time_lower_limit:
+            end_index += 1
+        else:
+            standard_deviation.append([end_index, np.std(csv[start_index:end_index, 1])])
+            end_index += 1
+    # 寻找起止点
+    points.append(0)
+    for i in standard_deviation:
+        index, std = i
+        if std <= std_limit and platform == False:
+            points.append(index)
+            platform = True
+            count -= 1
+        elif std > std_limit and platform == True:
+            # 排除延后效应的影响
+            time_now = csv[index][0]
+            while time_now - csv[index][0] < time_lower_limit / 1.0:    # 1.0可调节，越大对延后的校正越弱
+                index -= 1
+            points.append(index)
+            platform = False
+            count -= 1
+        if count == 2:
+            break
+    points.append(len(csv) - 1)
+    return points
