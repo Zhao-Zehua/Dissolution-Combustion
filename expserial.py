@@ -1,4 +1,6 @@
 # Author: 安孝彦
+# 内置库
+import time
 # 第三方库
 from func_timeout import func_set_timeout
 from serial import Serial, SerialException
@@ -100,10 +102,12 @@ class EasySerial:
             # 解决了串口断线重连的问题
             try:
                 self._port.open()   # 重新尝试打开端口
+                time.sleep(0.5) # 等待0.5s
             except SerialException as e:
                 pass
 
     # 读取温度
+    @func_set_timeout(1)
     def read(self):
         if self._port is None:
             "端口未打开！请先打开端口！"

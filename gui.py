@@ -11,6 +11,7 @@ import tkinter.filedialog as filedialog
 from tkinter.messagebox import showinfo, showwarning
 from tkinter.scrolledtext import ScrolledText
 # 第三方库
+from func_timeout import FunctionTimedOut
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
@@ -24,7 +25,7 @@ from water_capacity_smooth import water_capacity_smooth
 from water_density_smooth import water_density_smooth
 
 class Dissolution_Combustion:
-    def __init__(self, dx: float = 0.1, time_interval: int = 500, plot_max_points: int = 500, port_timeout: float = 0.25, std_limit: float = 0.005, time_lower_limit: int = 30, time_upper_limit: int = 40, width_height_inches: tuple = (10, 7), dpi: int = 600):
+    def __init__(self, dx: float = 0.1, time_interval: int = 500, plot_max_points: int = 500, port_timeout: float = 0.25, std_limit: float = 0.005, time_lower_limit: int = 30, time_upper_limit: int = 40, width_height_inches: tuple = (10, 7), dpi: int = 600, py_path: str = os.path.dirname(os.path.abspath(__file__))):
         '''
         dx: 积分、绘图步长
         time_interval: 记录数据间隔，单位毫秒
@@ -46,6 +47,7 @@ class Dissolution_Combustion:
         self.time_upper_limit = time_upper_limit    # 自动寻找平台期的最大时间窗口
         self.width_height_inches = width_height_inches  # 保存图片尺寸，单位英尺
         self.dpi = dpi  # 保存图片DPI
+        self.py_path = py_path  # main.py的绝对路径
         # 初始化根窗口
         #self.root = Tk()   # 一般版本
         self.root = ttk.Window(themename = "sandstone")  # 美化版本，自动适应高DPI
@@ -957,7 +959,7 @@ class Dissolution_Combustion:
             self.comport.close() if self.comport else None
             self.comport = None
         # 更新按钮状态
-        self.button_comport.set_menu(default = self.comport_selected.get(), *self.all_comports)
+        self.button_comport.set_menu(*self.all_comports)
         self.button_comport_upgrade.config(state = "normal")
         # 提示信息
         self.text_result.config(state = "normal")
@@ -979,7 +981,8 @@ class Dissolution_Combustion:
         self.treeview_csv.delete(*self.treeview_csv.get_children())
         try:
             # 打开与py文件同目录的临时文件，用逗号分隔的形式存储数据，方便后续处理
-            self.temp_file = open(os.path.dirname(os.path.abspath(__file__)) + "/tempfile.tmp", "w", encoding = "UTF-8")
+            # exe文件不能用os.path.abspath获取当前目录
+            self.temp_file = open(self.py_path + "/tempfile.tmp", "w", encoding = "UTF-8")
             self.temp_file.write("time(s),Delta_T(K)\n")
             self.temp_file.flush()
             self.time_start = time.time()
@@ -1030,17 +1033,27 @@ class Dissolution_Combustion:
             self.text_result.config(state = "normal")
             self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 串口读取数据失败，请检查串口连接状态。\n")
             self.text_result.config(state = "disabled")
+            self.text_result.see("end")
         except IOError:
             self.comport.close()
             self.comport.open()
         except AttributeError:
             pass
-        self.comport_reading = True
+        except FunctionTimedOut:
+            self.text_result.config(state = "normal")
+            self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 串口读取数据失败，请检查串口连接状态。\n")
+            self.text_result.config(state = "disabled")
+            self.text_result.see("end")
+        # self.comport_reading = True
         self.reading_comport = self.Frame1.after(self.time_interval, self.read_comport)
 
     # 开始记录数据
     def data_start(self):
         self.root.protocol("WM_DELETE_WINDOW", lambda: None)
+        self.temp_file.close()
+        self.temp_file = open(self.py_path + "/tempfile.tmp", "w", encoding = "UTF-8")
+        self.temp_file.write("time(s),Delta_T(K)\n")
+        self.temp_file.flush()
         self.time_start = time.time()
         self.csv_data = [["time(s)", "Delta_T(K)", "state"]]
         self.csv_state = 1
@@ -1072,13 +1085,6 @@ class Dissolution_Combustion:
         if self.csv_path == "":
             self.data_stop()
             return
-        self.time_start = time.time()
-        self.temp_Delta_t = []
-        self.temp_Delta_T = []
-        self.f.clear()
-        self.f.set_xlabel("$t$ (s)")
-        self.f.set_ylabel("$\Delta T$ (K)")
-        self.treeview_csv.delete(*self.treeview_csv.get_children())
         with open(self.csv_path, "w", encoding = "UTF-8", newline = "") as f:
             csv.writer(f).writerows(self.csv_data)
         showinfo(title = "提示", message = f"数据成功保存至{self.csv_path}")
@@ -1086,6 +1092,16 @@ class Dissolution_Combustion:
         self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 停止记录\n")
         self.text_result.config(state = "disabled")
         self.text_result.see("end")
+        self.temp_file.close()
+        self.temp_file = open(self.py_path + "/tempfile.tmp", "w", encoding = "UTF-8")
+        self.temp_file.write("time(s),Delta_T(K)\n")
+        self.temp_file.flush()
+        self.time_start = time.time()
+        self.temp_Delta_t = []
+        self.temp_Delta_T = []
+        self.f.clear()
+        self.f.set_xlabel("$t$ (s)")
+        self.f.set_ylabel("$\Delta T$ (K)")
         self.treeview_csv.delete(*self.treeview_csv.get_children())
         self.button_data_stop.config(state = "disabled")
         self.button_mode.configure(state = "normal")

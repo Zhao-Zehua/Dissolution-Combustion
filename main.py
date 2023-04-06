@@ -49,6 +49,7 @@
 # 内置库
 import os
 import shutil
+import sys
 # 自建库
 import gui
 
@@ -64,8 +65,22 @@ width_height_inches = (10, 6)   # 保存图片尺寸，单位英尺
 dpi = 600   # 保存图片DPI
 
 if __name__ == "__main__":
-    gui.Dissolution_Combustion(dx, time_interval, plot_max_points, port_timeout, std_limit, time_lower_limit, time_upper_limit, width_height_inches, dpi)
+    # 获取当前路径
+    # 如果是pyinstaller打包的exe文件，则获取exe文件所在目录的绝对路径
+    '''
+    没有进行mac适配测试，可能需要修改
+    '''
+    if getattr(sys, 'frozen', False):
+        py_path = os.path.dirname(os.path.abspath(sys.executable))
+        #如果是mac
+        if sys.platform == 'darwin':
+            for i in range(3):
+                py_path = os.path.dirname(py_path)
+    # 如果是运行的py文件，则获取py文件所在目录的绝对路径
+    else:
+        py_path = os.path.dirname(os.path.abspath(__file__))
+    gui.Dissolution_Combustion(dx, time_interval, plot_max_points, port_timeout, std_limit, time_lower_limit, time_upper_limit, width_height_inches, dpi, py_path)
     # 清除缓存文件夹
-    pycache_dir = os.path.dirname(os.path.abspath(__file__)) + '/__pycache__'
+    pycache_dir = py_path + '/__pycache__'
     if os.path.exists(pycache_dir):
         shutil.rmtree(pycache_dir)
