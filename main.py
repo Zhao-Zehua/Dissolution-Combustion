@@ -66,10 +66,7 @@ dpi = 600   # 保存图片DPI
 
 if __name__ == "__main__":
     # 获取当前路径
-    # 如果是pyinstaller打包的exe文件，则获取exe文件所在目录的绝对路径
-    '''
-    没有进行mac适配测试，可能需要修改
-    '''
+    # 如果是pyinstaller打包的exe文件，则获取可执行文件所在目录的绝对路径
     if getattr(sys, 'frozen', False):
         py_path = os.path.dirname(os.path.abspath(sys.executable))
         #如果是mac

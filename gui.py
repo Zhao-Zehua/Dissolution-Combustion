@@ -746,12 +746,12 @@ class Dissolution_Combustion:
         self.button_save.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
         frame4_left_4 = ttk.Frame(frame4_left, borderwidth = 2)
         frame4_left_4.place(relx = 0, rely = 0.15, relwidth = 1, relheight = 0.8)
-        self.treeview_csv = ttk.Treeview(frame4_left_4, show = "headings", columns = ("index", "n", "Qs(kJ/mol)"))
+        self.treeview_csv = ttk.Treeview(frame4_left_4, show = "headings", columns = ("index", "n0", "Qs(kJ/mol)"))
         self.treeview_csv.column("index", width = 25, anchor = "center")
-        self.treeview_csv.column("n", width = 50, anchor = "center")
+        self.treeview_csv.column("n0", width = 50, anchor = "center")
         self.treeview_csv.column("Qs(kJ/mol)", width = 50, anchor = "center")
         self.treeview_csv.heading("index", text = "index")
-        self.treeview_csv.heading("n", text = "n")
+        self.treeview_csv.heading("n0", text = "n0")
         self.treeview_csv.heading("Qs(kJ/mol)", text = "Qs(kJ/mol)")
         self.treeview_csv.place(relx = 0, rely = 0, relwidth = 0.95, relheight = 1)
         treeview_scrollbar = ttk.Scrollbar(frame4_left_4, orient = "vertical")
@@ -773,7 +773,7 @@ class Dissolution_Combustion:
         self.text_result.insert("end", "1. 点击文件(.csv)导入文件，默认文件名为dissolution.csv。\n")
         self.text_result.insert("end", "2. 导入的csv文件由本程序的溶解热模式自动生成。文件第一行为标题行，此后每一行必须按照实际实验顺序排列，且只能出现一次。输入文件不合法将无法计算，如格式有误请自行编辑。\n")
         self.text_result.insert("end", "3. 拟合方程为Qs = Qs0 × a × n / (1 + a × n)。\n")
-        self.text_result.insert("end", "4. 点击保存(.png)保存图片。\n\n")
+        self.text_result.insert("end", "4. 点击保存(.png)保存图片，并输出一个数据文档，其中储存了本次计算结果。\n\n")
         self.text_result.config(state = "disabled")
         self.text_result.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
         frame4_right_2 = ttk.Frame(frame4_right_paned, relief = "sunken", borderwidth = 5)
@@ -1025,7 +1025,7 @@ class Dissolution_Combustion:
             except TypeError:
                 pass
             if self.csv_state == 1:
-                self.csv_data.append([Delta_t, Delta_T, 0])
+                self.csv_data.append([f"{Delta_t:.3f}", f"{Delta_T:.3f}", 0])
             self.f.clear()
             self.f.set_xlabel("$t$ (s)")
             self.f.set_ylabel("$\Delta T$ (K)")
@@ -1764,7 +1764,7 @@ class Dissolution_Combustion:
         self.text_result.insert("end", "使用说明\n")
         self.text_result.insert("end", "1. 点击文件(.csv)导入文件，默认文件名为dissolution.csv。\n")
         self.text_result.insert("end", "2. 导入的csv文件由本程序的溶解热模式生成。文件第一行为标题行，此后每一行必须按照实际实验顺序排列，且只能出现一次。如格式有误请自行编辑。\n")
-        self.text_result.insert("end", "3. 拟合方程为Qs = Qs0 × a × n / (1 + a × n)。\n")
+        self.text_result.insert("end", "3. 拟合方程为Qs = Qs0 × a × n0 / (1 + a × n0)。\n")
         self.text_result.insert("end", "4. 点击保存(.png)保存图片。\n\n")
         self.text_result.config(state = "disabled")
         self.file_name, self.extension = self.file_name_extension(self.absolute_path)
@@ -1782,16 +1782,24 @@ class Dissolution_Combustion:
         dissolution_parameters = []
         for i in range(len_csv):
             dissolution_parameters.append([dissolution_csv[i][0], dissolution_csv[i][1], dissolution_csv[i][2], dissolution_csv[i][3], dissolution_csv[i][4]])
-        Qs, n, Qs0, a, stddev_Qs0, stddev_a, r_square = maths.dissolution_heat_regression(dissolution_parameters)
+        self.Qs, self.n, self.Qs0, self.a, self.stddev_Qs0, self.stddev_a, self.r_square = maths.dissolution_heat_regression(dissolution_parameters)
+        self.dissolution_test_data = maths.dissolution_heat_test(self.Qs0, self.a)
         # 更新treeview_csv
         self.treeview_csv.delete(*self.treeview_csv.get_children())
         for i in range(len_csv):
-            self.treeview_csv.insert("", i, values = (i, f"{n[i]:.4g}", f"{Qs[i]:.2f}"))
+            self.treeview_csv.insert("", i, values = (i, f"{self.n[i]:.4g}", f"{self.Qs[i]:.2f}"))
         # 更新绘图
         self.f.clear()
-        self.f.scatter(n, Qs, s = 50, marker = '+', color = 'dimgray', label = "$Q_s$-$n$ data points")
-        n_plot = np.arange(0, max(n) * 1.2, self.dx)
-        Qs_plot = (Qs0 * a * n_plot) / (1 + a * n_plot)
+        self.f.scatter(self.n, self.Qs, s = 50, marker = '+', color = 'dimgray', label = "$Q_s$-$n$ data points")
+        # 非线性拟合方程
+        n_plot = np.arange(0, max(self.n) * 1.2, self.dx)
+        Qs_plot = (self.Qs0 * self.a * n_plot) / (1 + self.a * n_plot)
+        '''
+        # 线性拟合方程
+        n_arange = max(n) - min(n)
+        n_plot = np.arange(min(n) - n_arange * 0.1, max(n) + n_arange * 0.1, n_arange / 1000)
+        Qs_plot = n_plot / (Qs0 * a) + 1 / Qs0
+        '''
         self.f.plot(n_plot, Qs_plot, color = '#1F77B4', label = "fitted curve")
         self.f.set_xlabel("$n$")
         self.f.set_ylabel("$Q_s$ (kJ/mol)")
@@ -1804,8 +1812,14 @@ class Dissolution_Combustion:
         # 更新text_result
         self.text_result.config(state = "normal")
         self.text_result.insert("end", f"拟合结果\n")
-        self.text_result.insert("end", f"Qs0 = {Qs0:.6} ± {stddev_Qs0:.3} (kJ/mol)    a = {a:.6} ± {stddev_a:.3}\n")
-        self.text_result.insert("end", f"Qs (kJ/mol) = {Qs0:.6} × {a:.6} × n / (1 + {a:.6} × n), r_square = {r_square:.9f}\n\n")
+        self.text_result.insert("end", f"Qs0 = {self.Qs0:.6} ± {self.stddev_Qs0:.3} (kJ/mol)    a = {self.a:.6} ± {self.stddev_a:.3}\n")
+        self.text_result.insert("end", f"Qs (kJ/mol) = {self.Qs0:.6} × {self.a:.6} × n0 / (1 + {self.a:.6} × n0), r_square = {self.r_square:.9f}\n\n")
+        dissolution_test_data_width = np.max(np.char.str_len(self.dissolution_test_data), axis = 0) + 2
+        dissolution_test_data_formatted = np.char.center(self.dissolution_test_data, dissolution_test_data_width)
+        self.text_result.insert("end", f"测试数据\n")
+        for row in dissolution_test_data_formatted:
+            self.text_result.insert("end", "|" + "|".join(row) + "|\n")
+        self.text_result.insert("end", "\n")
         self.text_result.config(state = "disabled")
         self.text_result.see("end")
         # 更新文件名
@@ -1815,10 +1829,26 @@ class Dissolution_Combustion:
 
     # 保存溶解热拟合模式的绘图
     def save_dissolution_file(self):
+        try:
+            with open(self.absolute_path.replace("." + self.extension, "_fitted_data.csv"), "w", encoding = "UTF-8", newline = "") as f:
+                writer = csv.writer(f)
+                writer.writerow(["n0", "Qs(kJ/mol)"])
+                n0_Qs = np.stack((self.n, self.Qs), axis = 1)
+                writer.writerows(n0_Qs)
+                writer.writerow([])
+                writer.writerows(self.dissolution_test_data)
+        except PermissionError:
+            self.text_result.config(state = "normal")
+            self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 保存失败！请关闭{self.file_name}_fitted_data.csv文件后再次尝试保存\n")
+            self.text_result.config(state = "disabled")
+            self.text_result.see("end")
+            showwarning(title = "警告", message = f"保存失败！请关闭{self.file_name}_fitted_data.csv文件后再次尝试保存")
+            return
         self.P.set_size_inches(self.width_height_inches)
         self.P.savefig(fname = self.absolute_path.replace(self.extension, "png"), dpi = self.dpi)
         self.text_result.config(state = "normal")
+        self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} {self.file_name}_fitted_data.csv文件保存成功\n")
         self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} {self.file_name}.png保存成功\n")
         self.text_result.config(state = "disabled")
         self.text_result.see("end")
-        showinfo(title = "提示", message = f"保存成功！\n{self.file_name}.png保存至{self.absolute_path.replace(self.file_name + '.' + self.extension, '')}")
+        showinfo(title = "提示", message = f"保存成功！\n{self.file_name}.png保存至{self.absolute_path.replace(self.file_name + '.' + self.extension, '')}\n计算数据保存至同目录下的{self.mode.get()}.csv文件")

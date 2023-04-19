@@ -124,6 +124,7 @@ def dissolution_heat_regression(dissolution_csv):
     n = n1 / sum_n2
     Qs = sum_Q / sum_n2
     '''
+    # 积分溶解热
     def equation(n, Qs0, a):
         return (Qs0 * a * n) / (1 + a * n)
     n = []
@@ -142,6 +143,7 @@ def dissolution_heat_regression(dissolution_csv):
         sum_Q += Q
         n.append(n1 / sum_n2)
         Qs.append(sum_Q / sum_n2)
+    #以下为scipy非线性拟合
     popt, pcov = optimize.curve_fit(equation, n, Qs, p0 = [20, 0.2])    # popt为最优拟合参数，pcov为拟合参数的协方差矩阵
     perr = np.sqrt(np.diag(pcov))   # perr为拟合参数的标准差
     Qs0, a = popt
@@ -154,7 +156,53 @@ def dissolution_heat_regression(dissolution_csv):
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((Qs - np.mean(Qs)) ** 2)
     r_square = 1 - (ss_res / ss_tot)
+    '''
+    #以下为线性拟合
+    n = np.array(n)
+    Qs = np.array(Qs)
+    n = 1 / n
+    Qs = 1 / Qs
+    Start, End = 0, len(n) - 1
+    # 将n和Qs合并为二维array，第一列为n，第二列为Qs
+    csv = np.stack((n, Qs), axis = 1)
+    k, b, stddev_k, stddev_b, r_square = linear_regression(csv, Start, End)
+    Qs0 = 1 / b
+    a = b / k
+    stddev_Qs0 = stddev_b / b ** 2
+    stddev_a = np.sqrt((stddev_b / k) ** 2 + (b * stddev_k / (k ** 2)) ** 2)
+    '''
     return Qs, n, Qs0, a, stddev_Qs0, stddev_a, r_square
+
+# 积分/微分溶解/冲淡热计算
+def dissolution_heat_test(Qs0, a, n_test = [200, 150, 100, 80, 50]):
+    n_test = np.array(n_test)
+    # 积分溶解热
+    Qs_int_dissolution = (Qs0 * a * n_test) / (1 + a * n_test)
+    # 积分冲淡热(取绝对值)
+    Qs_int_dilution = np.diff(Qs_int_dissolution) * 1000
+    # 微分溶解热
+    Qs_diff_dissolution = Qs0 * (a * n_test / (1 + a * n_test)) ** 2
+    # 微分冲淡热
+    Qs_diff_dilution = Qs0 * a * 1000 / (1 + a * n_test) ** 2
+    # 数据格式处理
+    Qs_int_dissolution = np.round(Qs_int_dissolution, 2)
+    Qs_int_dilution = np.round(np.abs(Qs_int_dilution), 2)
+    Qs_diff_dissolution = np.round(Qs_diff_dissolution, 2)
+    Qs_diff_dilution = np.round(Qs_diff_dilution, 2)
+    Qs_int_dilution = np.concatenate((["NA"], Qs_int_dilution), axis = 0)
+    '''
+    n_test = np.concatenate((["n0"], n_test), axis = 0)
+    Qs_int_dissolution = np.concatenate((["int_dissolution(kJ/mol)"], Qs_int_dissolution), axis = 0)
+    Qs_int_dilution = np.concatenate((["int_dilution(J/mol)", "NA"], Qs_int_dilution), axis = 0)
+    Qs_diff_dissolution = np.concatenate((["diff_dissolution(kJ/mol)"], Qs_diff_dissolution), axis = 0)
+    Qs_diff_dilution = np.concatenate((["diff_dilution(J/mol)"], Qs_diff_dilution), axis = 0)
+    '''
+    # 拼接为表格并格式化
+    title = ["n0", "Qs(kJ/mol)", "Qd(J/mol)", "Qs'_n2(kJ/mol)", "Qs'_n0(J/mol)"]
+    data = np.stack((n_test, Qs_int_dissolution, Qs_int_dilution, Qs_diff_dissolution, Qs_diff_dilution), axis = 1)
+    data = np.vstack((title, data))
+
+    return data
 
 # 燃烧热计算
 def calculate_combustion(parameters: list, code: str):
