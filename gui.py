@@ -938,13 +938,20 @@ class Dissolution_Combustion:
         self.f.set_xlabel("$t$ (s)")
         self.f.set_ylabel("$\Delta T$ (K)")
         self.treeview_csv.delete(*self.treeview_csv.get_children())
-        # 更新串口，由于未知原因只能暴力更新
+        # 提示信息
+        self.text_result.config(state = "normal")
+        if self.all_comports:
+            self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 串口检测完成，" + f"可用串口为{' '.join(self.all_comports)}\n")
+        else:
+            self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 串口检测完成，无可用串口\n")
+        self.text_result.config(state = "disabled")
+        self.text_result.see("end")
         # 如果有可用串口
         if self.all_comports:
             # 如果当前选择的串口不在可用串口中
             if self.comport_selected.get() not in self.all_comports:
-                # 选择最后一个可用串口并打开
-                self.comport_selected.set(self.all_comports[-1])
+                # 选择第一个可用串口并打开
+                self.comport_selected.set(self.all_comports[0])
                 #self.change_comport(self.comport_selected.get())
                 # 如果还没有开始读数(读数在打开程序后只需要启动一次)
                 #if not self.comport_reading:
@@ -959,20 +966,20 @@ class Dissolution_Combustion:
             self.comport.close() if self.comport else None
             self.comport = None
         # 更新按钮状态
-        self.button_comport.set_menu(*self.all_comports)
+        self.button_comport.set_menu(self.comport_selected.get(), *self.all_comports)
         self.button_comport_upgrade.config(state = "normal")
-        # 提示信息
-        self.text_result.config(state = "normal")
-        if self.all_comports:
-            self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 串口检测完成，" + f"可用串口为{' '.join(self.all_comports)}\n")
-        else:
-            self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 串口检测完成，无可用串口\n")
-        self.text_result.config(state = "disabled")
-        self.text_result.see("end")
 
     # 重选串口
     def change_comport(self, event):
+        self.comport.close() if self.comport else None
+        self.comport = None
+        self.comport_selected.set(event)
+        self.button_comport.set_menu(self.comport_selected.get(), *self.all_comports)
         self.comport = EasySerial(event)
+        self.text_result.config(state = "normal")
+        self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 串口已切换为{event}\n")
+        self.text_result.config(state = "disabled")
+        self.text_result.see("end")
         self.temp_Delta_t = []
         self.temp_Delta_T = []
         self.f.clear()
@@ -1154,9 +1161,10 @@ class Dissolution_Combustion:
     '''
     # 打开文件
     def open_file(self):
-        self.absolute_path = filedialog.askopenfilename(filetypes = [("CSV", ".csv"), ("TXT", ".txt"), ("ALL", "*.*")])
-        if self.absolute_path == "":
+        absolute_path = filedialog.askopenfilename(filetypes = [("CSV", ".csv"), ("TXT", ".txt"), ("ALL", "*.*")])
+        if absolute_path == "":
             return
+        self.absolute_path = absolute_path
         # 重置所有输入框的值，锁定所有输入框
         self.stringvars_start_end()
         self.entry_start1.config(textvariable = self.start1, state = "disabled")
@@ -1745,9 +1753,10 @@ class Dissolution_Combustion:
     '''
     # 打开溶解热数据文件dissolution.csv
     def open_dissolution_file(self):
-        self.absolute_path = filedialog.askopenfilename(filetypes = [("CSV", ".csv"), ("TXT", ".txt"), ("ALL", "*.*")])
-        if self.absolute_path == "":
+        absolute_path = filedialog.askopenfilename(filetypes = [("CSV", ".csv"), ("TXT", ".txt"), ("ALL", "*.*")])
+        if absolute_path == "":
             return
+        self.absolute_path = absolute_path
         self.button_save.config(state = "disabled")
         # 更新text_result
         self.text_result.config(state = "normal")
