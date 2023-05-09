@@ -143,8 +143,17 @@ def dissolution_heat_regression(dissolution_csv):
         sum_Q += Q
         n.append(n1 / sum_n2)
         Qs.append(sum_Q / sum_n2)
-    #以下为scipy非线性拟合
-    popt, pcov = optimize.curve_fit(equation, n, Qs, p0 = [20, 0.2])    # popt为最优拟合参数，pcov为拟合参数的协方差矩阵
+    # 使用线性拟合确定初值
+    n_p0 = np.array(np.copy(n))
+    Qs_p0 = np.array(np.copy(Qs))
+    n_p0 = 1 / n_p0
+    Qs_p0 = 1 / Qs_p0
+    Start, End = 0, len(n) - 1
+    csv = np.stack((n_p0, Qs_p0), axis = 1)
+    k, b, stddev_k, stddev_b, r_square_p0 = linear_regression(csv, Start, End)
+    p0 = [1 / b, b / k]
+    # 使用scipy非线性拟合确定最优拟合参数
+    popt, pcov = optimize.curve_fit(equation, n, Qs, p0 = p0)    # popt为最优拟合参数，pcov为拟合参数的协方差矩阵
     perr = np.sqrt(np.diag(pcov))   # perr为拟合参数的标准差
     Qs0, a = popt
     stddev_Qs0, stddev_a = perr
@@ -157,7 +166,27 @@ def dissolution_heat_regression(dissolution_csv):
     ss_tot = np.sum((Qs - np.mean(Qs)) ** 2)
     r_square = 1 - (ss_res / ss_tot)
     '''
-    #以下为线性拟合
+    # 以下为scipy非线性拟合
+    p0 = [30, 0.25]
+    if np.abs(solute_molarmass - 74.5) < 1: # 认为是KCl
+        p0 = [20, 0.4]
+    elif np.abs(solute_molarmass - 101.1) < 1:   # 认为是KNO3
+        p0 = [40, 0.1]
+    popt, pcov = optimize.curve_fit(equation, n, Qs, p0 = p0)    # popt为最优拟合参数，pcov为拟合参数的协方差矩阵
+    perr = np.sqrt(np.diag(pcov))   # perr为拟合参数的标准差
+    Qs0, a = popt
+    stddev_Qs0, stddev_a = perr
+    # 将n和Qs转换为numpy的array
+    n = np.array(n)
+    Qs = np.array(Qs)
+    # 计算拟合曲线的R平方
+    residuals = Qs - equation(n, *popt)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((Qs - np.mean(Qs)) ** 2)
+    r_square = 1 - (ss_res / ss_tot)
+    '''
+    '''
+    # 以下为线性拟合
     n = np.array(n)
     Qs = np.array(Qs)
     n = 1 / n

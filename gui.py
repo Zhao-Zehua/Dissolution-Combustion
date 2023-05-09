@@ -105,14 +105,27 @@ class Dissolution_Combustion:
         except:
             pass
         # 初始化窗口大小
-        self.root.minsize(800, 600)
-        self.root.geometry("800x600")
+        min_height = 960
+        min_width = int(min_height * 4 / 3)
+        self.root.minsize(min_width, min_height)
+        self.root.geometry(f"{min_width}x{min_height}")
         # 获取屏幕高度
         screen_height = self.root.winfo_screenheight()
-        # 设置窗口大小默认高度为屏幕高度的75%，宽高比为4:3
+        screen_width = self.root.winfo_screenwidth()
+        # 完整显示的宽高为1280x960，默认高度为屏幕高度的75%，宽高比为4:3
         default_height = int(screen_height * 0.75)
         default_width = int(screen_height * 0.75 * 4 / 3)
-        self.root.geometry(str(default_width) + "x" + str(default_height))
+        # 如果屏幕分辨率过低，那么调整最小窗口大小
+        if screen_height < min_height or screen_width < min_width:
+            self.root.minsize(screen_width, screen_height)
+            self.root.geometry(f"{screen_width}x{screen_height}")
+        # 如果屏幕分辨率满足要求，但默认宽高不能完全显示，那么不需要调整窗口大小
+        # 如果屏幕分辨率满足要求，且默认宽高可以完全显示，那么调整窗口大小
+        elif screen_height * 0.75 > min_height and screen_height * 0.75 * 4 / 3 > min_width:
+            # 设置窗口大小默认高度为屏幕高度的75%，宽高比为4:3
+            default_height = int(screen_height * 0.75)
+            default_width = int(screen_height * 0.75 * 4 / 3)
+            self.root.geometry(f"{default_width}x{default_height}")
         # 初始化各个Frame
         self.Frame1 = ttk.Frame(self.root)
         self.Frame2 = ttk.Frame(self.root)
@@ -145,6 +158,18 @@ class Dissolution_Combustion:
         # 初始化Frame1变量
         # 初始化self变量
         self.mode = StringVar(value = "data")
+        self.temperature = StringVar(value = "298.15")
+        self.water_volume = StringVar(value = "500.0")
+        self.water_density = StringVar(value = "0.9970470")
+        self.water_capacity = StringVar(value = "4.1813")
+        self.solute_molarmass = StringVar(value = "74.551")
+        self.current = StringVar(value = "1.00")
+        self.stringvars_dissolution()
+        self.benzoic_enthalpy = StringVar(value = "-3228.2")
+        self.cotton_heat = StringVar(value = "-16736")
+        self.Nickel_heat = StringVar(value = "-3243")
+        self.constant = StringVar()
+        self.stringvars_combustion()
         self.radiobutton_mode_selected = StringVar(value = "dissolution")
         self.absolute_path = str()
         self.f.clear()
@@ -198,27 +223,114 @@ class Dissolution_Combustion:
         self.button_heat_stop = ttk.Button(frame1_left_6, text = "停止加热", command = self.heat_stop, state = "disabled")
         self.button_heat_stop.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
         frame1_left_7 = ttk.Frame(frame1_left, borderwidth = 2)
-        frame1_left_7.place(relx = 0, rely = 0.3, relwidth = 1, relheight = 0.65)
-        self.treeview_csv = ttk.Treeview(frame1_left_7, show = "headings", columns = ("time(s)", "Delta_T(K)"))
+        frame1_left_7.place(relx = 0, rely = 0.3, relwidth = 1, relheight = 0.05)
+        self.button_data_finish = ttk.Button(frame1_left_7, text = "保存数据", command = self.data_finish, state = "disabled")
+        self.button_data_finish.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        frame1_left_8 = ttk.Frame(frame1_left, borderwidth = 2)
+        frame1_left_8.place(relx = 0, rely = 0.35, relwidth = 1, relheight = 0.6)
+        self.treeview_csv = ttk.Treeview(frame1_left_8, show = "headings", columns = ("time(s)", "Delta_T(K)"))
         self.treeview_csv.column("time(s)", width = 50, anchor = "center")
         self.treeview_csv.column("Delta_T(K)", width = 50, anchor = "center")
         self.treeview_csv.heading("time(s)", text = "time(s)")
         self.treeview_csv.heading("Delta_T(K)", text = "Delta_T(K)")
         self.treeview_csv.place(relx = 0, rely = 0, relwidth = 0.95, relheight = 1)
-        treeview_scrollbar = ttk.Scrollbar(frame1_left_7, orient = "vertical")
+        treeview_scrollbar = ttk.Scrollbar(frame1_left_8, orient = "vertical")
         treeview_scrollbar.config(command = self.treeview_csv.yview)
         treeview_scrollbar.place(relx = 0.95, rely = 0, relwidth = 0.05, relheight = 1)
-        frame1_left_8 = ttk.Frame(frame1_left)
-        frame1_left_8.place(relx = 0, rely = 0.95, relwidth = 1, relheight = 0.05)
-        self.label_path = ttk.Label(frame1_left_8, text = "作者：赵泽华 安孝彦", anchor = "center")
+        frame1_left_9 = ttk.Frame(frame1_left)
+        frame1_left_9.place(relx = 0, rely = 0.95, relwidth = 1, relheight = 0.05)
+        self.label_path = ttk.Label(frame1_left_9, text = "作者：赵泽华 安孝彦", anchor = "center")
         self.label_path.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
         frame1_right = ttk.Frame(frame1_paned)
         frame1_paned.add(frame1_right, weight = 70)
         frame1_right_paned = ttk.PanedWindow(frame1_right, orient = "vertical")
         frame1_right_paned.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
         frame1_right_1 = ttk.Frame(frame1_right_paned, relief = "sunken", borderwidth = 5)
-        frame1_right_paned.add(frame1_right_1, weight = 35)
-        self.text_result = ScrolledText(frame1_right_1, state = "disabled")
+        frame1_right_paned.add(frame1_right_1, weight = 20)
+        frame1_right_1_left = ttk.Frame(frame1_right_1, borderwidth = 2)
+        frame1_right_1_left.place(relx = 0, rely = 0, relwidth = 0.5, relheight = 1)
+        label_temperature = ttk.Label(frame1_right_1_left, text = "温度(K)")
+        label_temperature.config(padding = 2)
+        label_temperature.place(relx = 0, rely = 0, relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_temperature = ttk.Entry(frame1_right_1_left, textvariable = self.temperature, state = "normal")
+        self.entry_temperature.bind("<FocusIn>", lambda event: self.bind_return_check_memory("temperature"))
+        self.entry_temperature.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("temperature"))
+        self.entry_temperature.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = float(1 / 6))
+        label_solute_molarmass = ttk.Label(frame1_right_1_left, text = "溶质式量(g/mol)")
+        label_solute_molarmass.config(padding = 2)
+        label_solute_molarmass.place(relx = 0, rely = float(1 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_solute_molarmass = ttk.Entry(frame1_right_1_left, textvariable = self.solute_molarmass, state = "normal")
+        self.entry_solute_molarmass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("solute_molarmass"))
+        self.entry_solute_molarmass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("solute_molarmass"))
+        self.entry_solute_molarmass.place(relx = 0.5, rely = float(1 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        label_solute_mass = ttk.Label(frame1_right_1_left, text = "溶质质量(g)")
+        label_solute_mass.config(padding = 2)
+        label_solute_mass.place(relx = 0, rely = float(2 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_solute_mass = ttk.Entry(frame1_right_1_left, textvariable = self.solute_mass, state = "normal")
+        self.entry_solute_mass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("solute_mass"))
+        self.entry_solute_mass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("solute_mass"))
+        self.entry_solute_mass.place(relx = 0.5, rely = float(2 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        label_R1 = ttk.Label(frame1_right_1_left, text = "加热前电阻(Ω)")
+        label_R1.config(padding = 2)
+        label_R1.place(relx = 0, rely = float(3 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_R1 = ttk.Entry(frame1_right_1_left, textvariable = self.R1, state = "normal")
+        self.entry_R1.bind("<FocusIn>", lambda event: self.bind_return_check_memory("R1"))
+        self.entry_R1.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("R1"))
+        self.entry_R1.place(relx = 0.5, rely = float(3 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        label_R2 = ttk.Label(frame1_right_1_left, text = "加热后电阻(Ω)")
+        label_R2.config(padding = 2)
+        label_R2.place(relx = 0, rely = float(4 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_R2 = ttk.Entry(frame1_right_1_left, textvariable = self.R2, state = "normal")
+        self.entry_R2.bind("<FocusIn>", lambda event: self.bind_return_check_memory("R2"))
+        self.entry_R2.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("R2"))
+        self.entry_R2.place(relx = 0.5, rely = float(4 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        label_current = ttk.Label(frame1_right_1_left, text = "电流(A)")
+        label_current.config(padding = 2)
+        label_current.place(relx = 0, rely = float(5 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_current = ttk.Entry(frame1_right_1_left, textvariable = self.current, state = "normal")
+        self.entry_current.bind("<FocusIn>", lambda event: self.bind_return_check_memory("current"))
+        self.entry_current.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("current"))
+        self.entry_current.place(relx = 0.5, rely = float(5 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        frame1_right_1_right = ttk.Frame(frame1_right_1, borderwidth = 2)
+        frame1_right_1_right.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
+        label_water_volume = ttk.Label(frame1_right_1_right, text = "水体积(mL)")
+        label_water_volume.config(padding = 2)
+        label_water_volume.place(relx = 0, rely = 0, relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_water_volume = ttk.Entry(frame1_right_1_right, textvariable = self.water_volume, state = "normal")
+        self.entry_water_volume.bind("<FocusIn>", lambda event: self.bind_return_check_memory("water_volume"))
+        self.entry_water_volume.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("water_volume"))
+        self.entry_water_volume.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = float(1 / 6))
+        label_cotton_mass = ttk.Label(frame1_right_1_right, text = "棉线(g)")
+        label_cotton_mass.config(padding = 2)
+        label_cotton_mass.place(relx = 0, rely = float(1 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_cotton_mass = ttk.Entry(frame1_right_1_right, textvariable = self.cotton_mass, state = "disabled")
+        self.entry_cotton_mass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("cotton_mass"))
+        self.entry_cotton_mass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("cotton_mass"))
+        self.entry_cotton_mass.place(relx = 0.5, rely = float(1 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        self.label_combustible_mass = ttk.Label(frame1_right_1_right, text = "苯甲酸+棉线(g)")
+        self.label_combustible_mass.config(padding = 2)
+        self.label_combustible_mass.place(relx = 0, rely = float(2 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_combustible_mass = ttk.Entry(frame1_right_1_right, textvariable = self.combustible_mass, state = "disabled")
+        self.entry_combustible_mass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("combustible_mass"))
+        self.entry_combustible_mass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("combustible_mass"))
+        self.entry_combustible_mass.place(relx = 0.5, rely = float(2 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        label_Nickel_before_mass = ttk.Label(frame1_right_1_right, text = "镍丝(g)")
+        label_Nickel_before_mass.config(padding = 2)
+        label_Nickel_before_mass.place(relx = 0, rely = float(3 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_Nickel_before_mass = ttk.Entry(frame1_right_1_right, textvariable = self.Nickel_before_mass, state = "disabled")
+        self.entry_Nickel_before_mass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("Nickel_before_mass"))
+        self.entry_Nickel_before_mass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("Nickel_before_mass"))
+        self.entry_Nickel_before_mass.place(relx = 0.5, rely = float(3 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        label_Nickel_after_mass = ttk.Label(frame1_right_1_right, text = "燃烧后镍丝(g)")
+        label_Nickel_after_mass.config(padding = 2)
+        label_Nickel_after_mass.place(relx = 0, rely = float(4 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        self.entry_Nickel_after_mass = ttk.Entry(frame1_right_1_right, textvariable = self.Nickel_after_mass, state = "disabled")
+        self.entry_Nickel_after_mass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("Nickel_after_mass"))
+        self.entry_Nickel_after_mass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("Nickel_after_mass"))
+        self.entry_Nickel_after_mass.place(relx = 0.5, rely = float(4 / 6), relwidth = 0.5, relheight = float(1 / 6))
+        frame1_right_2 = ttk.Frame(frame1_right_paned, relief = "sunken", borderwidth = 5)
+        frame1_right_paned.add(frame1_right_2, weight = 15)
+        self.text_result = ScrolledText(frame1_right_2, state = "disabled")
         self.text_result.config(state = "normal")
         self.text_result.insert("end", "数据记录模式使用说明\n")
         self.text_result.insert("end", "0. 点击左上角按钮切换模式\n")
@@ -226,18 +338,19 @@ class Dissolution_Combustion:
         self.text_result.insert("end", "2. 点击刷新串口，程序将自动识别有数据输入的串口，并开始读取数据。如有多个有数据输入的串口，请自行选择正确的一个。\n")
         self.text_result.insert("end", "3. 点击开始记录，开始记录数据。\n")
         self.text_result.insert("end", "4. 如选择溶解热记录模式，在开始加热和结束加热时点击相应按钮。\n")
-        self.text_result.insert("end", "5. 点击停止记录，停止记录数据，并保存。\n")
-        self.text_result.insert("end", "6. 如数据丢失，可从与main.py同目录的tempfile.tmp中找到最近一次的记录数据。注意：溶解热的此数据需要处理后再使用。\n")
-        self.text_result.insert("end", "7. 为保证csv文档的易读性，建议使用纯英文字符命名csv文件。\n\n")
+        self.text_result.insert("end", "5. 点击停止记录，停止记录数据。\n")
+        self.text_result.insert("end", "6. 在文本框中输入实验参数后，保存数据。\n")
+        self.text_result.insert("end", "7. 如数据丢失，可从与main.py同目录的tempfile.tmp中找到最近一次的记录数据。注意：溶解热的此数据需要处理后再使用。\n")
+        self.text_result.insert("end", "8. 为保证csv文档的易读性，建议使用纯英文字符命名csv文件。\n\n")
         self.text_result.config(state = "disabled")
         self.text_result.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
-        frame1_right_2 = ttk.Frame(frame1_right_paned, relief = "sunken", borderwidth = 5)
-        frame1_right_paned.add(frame1_right_2, weight = 65)
+        frame1_right_3 = ttk.Frame(frame1_right_paned, relief = "sunken", borderwidth = 5)
+        frame1_right_paned.add(frame1_right_3, weight = 65)
         self.canvas.draw()
         PIL_image = pilImage.frombytes("RGB", self.canvas.get_width_height(), self.canvas.tostring_rgb())
         tk_image = ImageTk.PhotoImage(PIL_image)
-        frame1_right_2.bind("<Configure>", self.resize_image)
-        self.canvas_plot = ttk.Label(frame1_right_2, image = tk_image)
+        frame1_right_3.bind("<Configure>", self.resize_image)
+        self.canvas_plot = ttk.Label(frame1_right_3, image = tk_image)
         self.canvas_plot.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
 
     # 溶解热计算
@@ -311,15 +424,15 @@ class Dissolution_Combustion:
         label_start1.config(anchor = "center")
         label_start1.place(relx = 0, rely = 0, relwidth = 0.25, relheight = 1)
         self.entry_start1 = ttk.Spinbox(frame2_right_1_left_1, textvariable = self.start1, command = self.input_, from_ = 0, to = 0, increment = 1, state = "disabled")
-        self.entry_start1.bind("<FocusIn>", lambda event: self.bind_return("start1"))
-        self.entry_start1.bind("<FocusOut>", lambda event: self.unbind_return("start1"))        
+        self.entry_start1.bind("<FocusIn>", lambda event: self.bind_return_input_("start1"))
+        self.entry_start1.bind("<FocusOut>", lambda event: self.unbind_return_input_("start1"))        
         self.entry_start1.place(relx = 0.25, rely = 0, relwidth = 0.25, relheight = 1)
         label_end1 = ttk.Label(frame2_right_1_left_1, text = "End 1")    
         label_end1.config(anchor = "center")
         label_end1.place(relx = 0.5, rely = 0, relwidth = 0.25, relheight = 1)
         self.entry_end1 = ttk.Spinbox(frame2_right_1_left_1, textvariable = self.end1, command = self.input_, from_ = 0, to = 0, increment = 1, state = "disabled")
-        self.entry_end1.bind("<FocusIn>", lambda event: self.bind_return("end1"))
-        self.entry_end1.bind("<FocusOut>", lambda event: self.unbind_return("end1"))
+        self.entry_end1.bind("<FocusIn>", lambda event: self.bind_return_input_("end1"))
+        self.entry_end1.bind("<FocusOut>", lambda event: self.unbind_return_input_("end1"))
         self.entry_end1.place(relx = 0.75, rely = 0, relwidth = 0.25, relheight = 1)
         frame2_right_1_left_2 = ttk.Frame(frame2_right_1_left, borderwidth = 2)
         frame2_right_1_left_2.place(relx = 0, rely = 0.25, relwidth = 1, relheight = 0.25)
@@ -327,15 +440,15 @@ class Dissolution_Combustion:
         label_start2.config(anchor = "center")
         label_start2.place(relx = 0, rely = 0, relwidth = 0.25, relheight = 1)
         self.entry_start2 = ttk.Spinbox(frame2_right_1_left_2, textvariable = self.start2, command = self.input_, from_ = 0, to = 0, increment = 1, state = "disabled")
-        self.entry_start2.bind("<FocusIn>", lambda event: self.bind_return("start2"))
-        self.entry_start2.bind("<FocusOut>", lambda event: self.unbind_return("start2"))
+        self.entry_start2.bind("<FocusIn>", lambda event: self.bind_return_input_("start2"))
+        self.entry_start2.bind("<FocusOut>", lambda event: self.unbind_return_input_("start2"))
         self.entry_start2.place(relx = 0.25, rely = 0, relwidth = 0.25, relheight = 1)
         label_end2 = ttk.Label(frame2_right_1_left_2, text = "End 2")
         label_end2.config(anchor = "center")
         label_end2.place(relx = 0.5, rely = 0, relwidth = 0.25, relheight = 1)
         self.entry_end2 = ttk.Spinbox(frame2_right_1_left_2, textvariable = self.end2, command = self.input_, from_ = 0, to = 0, increment = 1, state = "disabled")
-        self.entry_end2.bind("<FocusIn>", lambda event: self.bind_return("end2"))
-        self.entry_end2.bind("<FocusOut>", lambda event: self.unbind_return("end2"))
+        self.entry_end2.bind("<FocusIn>", lambda event: self.bind_return_input_("end2"))
+        self.entry_end2.bind("<FocusOut>", lambda event: self.unbind_return_input_("end2"))
         self.entry_end2.place(relx = 0.75, rely = 0, relwidth = 0.25, relheight = 1)
         frame2_right_1_left_3 = ttk.Frame(frame2_right_1_left, borderwidth = 2)
         frame2_right_1_left_3.place(relx = 0, rely = 0.5, relwidth = 1, relheight = 0.25)
@@ -343,15 +456,15 @@ class Dissolution_Combustion:
         label_start3.config(anchor = "center")
         label_start3.place(relx = 0, rely = 0, relwidth = 0.25, relheight = 1)
         self.entry_start3 = ttk.Spinbox(frame2_right_1_left_3, textvariable = self.start3, command = self.input_, from_ = 0, to = 0, increment = 1, state = "disabled")
-        self.entry_start3.bind("<FocusIn>", lambda event: self.bind_return("start3"))
-        self.entry_start3.bind("<FocusOut>", lambda event: self.unbind_return("start3"))
+        self.entry_start3.bind("<FocusIn>", lambda event: self.bind_return_input_("start3"))
+        self.entry_start3.bind("<FocusOut>", lambda event: self.unbind_return_input_("start3"))
         self.entry_start3.place(relx = 0.25, rely = 0, relwidth = 0.25, relheight = 1)
         label_end3 = ttk.Label(frame2_right_1_left_3, text = "End 3")
         label_end3.config(anchor = "center")
         label_end3.place(relx = 0.5, rely = 0, relwidth = 0.25, relheight = 1)
         self.entry_end3 = ttk.Spinbox(frame2_right_1_left_3, textvariable = self.end3, command = self.input_, from_ = 0, to = 0, increment = 1, state = "disabled")
-        self.entry_end3.bind("<FocusIn>", lambda event: self.bind_return("end3"))
-        self.entry_end3.bind("<FocusOut>", lambda event: self.unbind_return("end3"))
+        self.entry_end3.bind("<FocusIn>", lambda event: self.bind_return_input_("end3"))
+        self.entry_end3.bind("<FocusOut>", lambda event: self.unbind_return_input_("end3"))
         self.entry_end3.place(relx = 0.75, rely = 0, relwidth = 0.25, relheight = 1)
         frame2_right_1_left_4 = ttk.Frame(frame2_right_1_left)
         frame2_right_1_left_4.place(relx = 0, rely = 0.75, relwidth = 1, relheight = 0.25)
@@ -370,72 +483,83 @@ class Dissolution_Combustion:
         label_temperature.config(padding = 2)
         label_temperature.place(relx = 0, rely = 0, relwidth = 0.25, relheight = float(1 / 6))
         self.entry_temperature = ttk.Entry(frame2_right_1_right, textvariable = self.temperature, state = "disabled")
-        self.entry_temperature.bind("<FocusOut>", lambda event: self.check_memory("temperature"))
+        self.entry_temperature.bind("<FocusIn>", lambda event: self.bind_return_check_memory("temperature"))
+        self.entry_temperature.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("temperature"))
         self.entry_temperature.place(relx = 0.25, rely = 0, relwidth = 0.25, relheight = float(1 / 6))
         label_water_volume = ttk.Label(frame2_right_1_right, text = "水体积(mL)")
         label_water_volume.config(padding = 2)
         label_water_volume.place(relx = 0.5, rely = 0, relwidth = 0.25, relheight = float(1 / 6))
         self.entry_water_volume = ttk.Entry(frame2_right_1_right, textvariable = self.water_volume, state = "disabled")
-        self.entry_water_volume.bind("<FocusOut>", self.check_memory)
+        self.entry_water_volume.bind("<FocusIn>", lambda event: self.bind_return_check_memory("water_volume"))
+        self.entry_water_volume.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("water_volume"))
         self.entry_water_volume.place(relx = 0.75, rely = 0, relwidth = 0.25, relheight = float(1 / 6))
         # 参数第二行
         label_water_density = ttk.Label(frame2_right_1_right, text = "水密度(g/mL)")
         label_water_density.config(padding = 2)
         label_water_density.place(relx = 0, rely = float(1 / 6), relwidth = 0.25, relheight = float(1 / 6))
         self.entry_water_density = ttk.Entry(frame2_right_1_right, textvariable = self.water_density, state = "disabled")
-        self.entry_water_density.bind("<FocusOut>", self.check_memory)
+        self.entry_water_density.bind("<FocusIn>", lambda event: self.bind_return_check_memory("water_density"))
+        self.entry_water_density.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("water_density"))
         self.entry_water_density.place(relx = 0.25, rely = float(1 / 6), relwidth = 0.25, relheight = float(1 / 6))
         label_water_capacity = ttk.Label(frame2_right_1_right, text = "水热容(J/gK)")
         label_water_capacity.config(padding = 2)
         label_water_capacity.place(relx = 0.5, rely = float(1 / 6), relwidth = 0.25, relheight = float(1 / 6))
         self.entry_water_capacity = ttk.Entry(frame2_right_1_right, textvariable = self.water_capacity, state = "disabled")
-        self.entry_water_capacity.bind("<FocusOut>", self.check_memory)
+        self.entry_water_capacity.bind("<FocusIn>", lambda event: self.bind_return_check_memory("water_capacity"))
+        self.entry_water_capacity.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("water_capacity"))
         self.entry_water_capacity.place(relx = 0.75, rely = float(1 / 6), relwidth = 0.25, relheight = float(1 / 6))
         # 参数第三行
         label_solute_mass = ttk.Label(frame2_right_1_right, text = "溶质质量(g)")
         label_solute_mass.config(padding = 2)
         label_solute_mass.place(relx = 0, rely = float(2 / 6), relwidth = 0.25, relheight = float(1 / 6))
         self.entry_solute_mass = ttk.Entry(frame2_right_1_right, textvariable = self.solute_mass, state = "disabled")
-        self.entry_solute_mass.bind("<FocusOut>", self.check_memory)
+        self.entry_solute_mass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("solute_mass"))
+        self.entry_solute_mass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("solute_mass"))
         self.entry_solute_mass.place(relx = 0.25, rely = float(2 / 6), relwidth = 0.25, relheight = float(1 / 6))
         label_solute_molarmass = ttk.Label(frame2_right_1_right, text = "溶质式量(g/mol)")
         label_solute_molarmass.config(padding = 2)
         label_solute_molarmass.place(relx = 0.5, rely = float(2 / 6), relwidth = 0.25, relheight = float(1 / 6))
         self.entry_solute_molarmass = ttk.Entry(frame2_right_1_right, textvariable = self.solute_molarmass, state = "disabled")
-        self.entry_solute_molarmass.bind("<FocusOut>", self.check_memory)
+        self.entry_solute_molarmass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("solute_molarmass"))
+        self.entry_solute_molarmass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("solute_molarmass"))
         self.entry_solute_molarmass.place(relx = 0.75, rely = float(2 / 6), relwidth = 0.25, relheight = float(1 / 6))
         # 参数第四行
         label_R1 = ttk.Label(frame2_right_1_right, text = "加热前电阻(Ω)")
         label_R1.config(padding = 2)
         label_R1.place(relx = 0, rely = float(3 / 6), relwidth = 0.25, relheight = float(1 / 6))
         self.entry_R1 = ttk.Entry(frame2_right_1_right, textvariable = self.R1, state = "disabled")
-        self.entry_R1.bind("<FocusOut>", self.check_memory)
+        self.entry_R1.bind("<FocusIn>", lambda event: self.bind_return_check_memory("R1"))
+        self.entry_R1.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("R1"))
         self.entry_R1.place(relx = 0.25, rely = float(3 / 6), relwidth = 0.25, relheight = float(1 / 6))
         label_R2 = ttk.Label(frame2_right_1_right, text = "加热后电阻(Ω)")
         label_R2.config(padding = 2)
         label_R2.place(relx = 0.5, rely = float(3 / 6), relwidth = 0.25, relheight = float(1 / 6))
         self.entry_R2 = ttk.Entry(frame2_right_1_right, textvariable = self.R2, state = "disabled")
-        self.entry_R2.bind("<FocusOut>", self.check_memory)
+        self.entry_R2.bind("<FocusIn>", lambda event: self.bind_return_check_memory("R2"))
+        self.entry_R2.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("R2"))
         self.entry_R2.place(relx = 0.75, rely = float(3 / 6), relwidth = 0.25, relheight = float(1 / 6))
         # 参数第五行
         label_t1 = ttk.Label(frame2_right_1_right, text = "加热开始时间(s)")
         label_t1.config(padding = 2)
         label_t1.place(relx = 0, rely = float(4 / 6), relwidth = 0.25, relheight = float(1 / 6))
         self.entry_t1 = ttk.Entry(frame2_right_1_right, textvariable = self.t1, state = "disabled")
-        self.entry_t1.bind("<FocusOut>", self.check_memory)
+        self.entry_t1.bind("<FocusIn>", lambda event: self.bind_return_check_memory("t1"))
+        self.entry_t1.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("t1"))
         self.entry_t1.place(relx = 0.25, rely = float(4 / 6), relwidth = 0.25, relheight = float(1 / 6))
         label_t2 = ttk.Label(frame2_right_1_right, text = "加热结束时间(s)")
         label_t2.config(padding = 2)
         label_t2.place(relx = 0.5, rely = float(4 / 6), relwidth = 0.25, relheight = float(1 / 6))
         self.entry_t2 = ttk.Entry(frame2_right_1_right, textvariable = self.t2, state = "disabled")
-        self.entry_t2.bind("<FocusOut>", self.check_memory)
+        self.entry_t2.bind("<FocusIn>", lambda event: self.bind_return_check_memory("t2"))
+        self.entry_t2.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("t2"))
         self.entry_t2.place(relx = 0.75, rely = float(4 / 6), relwidth = 0.25, relheight = float(1 / 6))
         # 参数第六行
         label_current = ttk.Label(frame2_right_1_right, text = "电流(A)")
         label_current.config(padding = 2)
         label_current.place(relx = 0, rely = float(5 / 6), relwidth = 0.25, relheight = float(1 / 6))
         self.entry_current = ttk.Entry(frame2_right_1_right, textvariable = self.current, state = "disabled")
-        self.entry_current.bind("<FocusOut>", self.check_memory)
+        self.entry_current.bind("<FocusIn>", lambda event: self.bind_return_check_memory("current"))
+        self.entry_current.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("current"))
         self.entry_current.place(relx = 0.25, rely = float(5 / 6), relwidth = 0.25, relheight = float(1 / 6))
         label_dissolution_heat = ttk.Label(frame2_right_1_right, text = "溶解热(kJ)")
         label_dissolution_heat.config(padding = 2)
@@ -448,7 +572,7 @@ class Dissolution_Combustion:
         self.text_result.insert("end", "溶解热模式使用说明\n")
         self.text_result.insert("end", "0. 点击左上角按钮切换模式\n")
         self.text_result.insert("end", "1. 点击文件(.csv)导入文件，建议文件名不包含中文字符。\n")
-        self.text_result.insert("end", "2. csv文件格式：第一行为标题行，第一列为升序的time(s)，第二列为Delta_T(K)，第三列为state；同一行数据间以半角逗号分隔。state为1是开始加热的标志点，state为2是结束加热的标志点。\n")
+        self.text_result.insert("end", "2. csv文件格式：共2列；前9行为参数名和参数数值；第10行为温度曲线的标题，第11行起为温度曲线数据，第1列为升序的time(s)，第2列为Delta_T(K)；同一行数据间以半角逗号分隔。\n")
         self.text_result.insert("end", "3. 调整Start 1 < End 1 < Start 2 < End 2 < Start 3 < End 3至合适位置。\n")
         self.text_result.insert("end", "4. 点击计算进行积分和溶解热计算。\n")
         self.text_result.insert("end", "5. 点击保存(.png)保存结果，并输出一个dissolution.csv文档，其中储存了本次计算的参数和结果。dissolution.csv可以直接用于积分溶解热的拟合计算。\n")
@@ -541,15 +665,15 @@ class Dissolution_Combustion:
         label_start1.config(anchor = "center")
         label_start1.place(relx = 0, rely = 0, relwidth = 0.25, relheight = 1)
         self.entry_start1 = ttk.Spinbox(frame3_right_1_left_1, textvariable = self.start1, command = self.input_, from_ = 0, to = 0, increment = 1, state = "disabled")
-        self.entry_start1.bind("<FocusIn>", lambda event: self.bind_return("start1"))
-        self.entry_start1.bind("<FocusOut>", lambda event: self.unbind_return("start1"))        
+        self.entry_start1.bind("<FocusIn>", lambda event: self.bind_return_input_("start1"))
+        self.entry_start1.bind("<FocusOut>", lambda event: self.unbind_return_input_("start1"))        
         self.entry_start1.place(relx = 0.25, rely = 0, relwidth = 0.25, relheight = 1)
         label_end1 = ttk.Label(frame3_right_1_left_1, text = "End 1")
         label_end1.config(anchor = "center")
         label_end1.place(relx = 0.5, rely = 0, relwidth = 0.25, relheight = 1)
         self.entry_end1 = ttk.Spinbox(frame3_right_1_left_1, textvariable = self.end1, command = self.input_, from_ = 0, to = 0, increment = 1, state = "disabled")
-        self.entry_end1.bind("<FocusIn>", lambda event: self.bind_return("end1"))
-        self.entry_end1.bind("<FocusOut>", lambda event: self.unbind_return("end1"))
+        self.entry_end1.bind("<FocusIn>", lambda event: self.bind_return_input_("end1"))
+        self.entry_end1.bind("<FocusOut>", lambda event: self.unbind_return_input_("end1"))
         self.entry_end1.place(relx = 0.75, rely = 0, relwidth = 0.25, relheight = 1)
         frame3_right_1_left_2 = ttk.Frame(frame3_right_1_left, borderwidth = 2)
         frame3_right_1_left_2.place(relx = 0, rely = 0.25, relwidth = 1, relheight = 0.25)
@@ -557,15 +681,15 @@ class Dissolution_Combustion:
         label_start2.config(anchor = "center")
         label_start2.place(relx = 0, rely = 0, relwidth = 0.25, relheight = 1)
         self.entry_start2 = ttk.Spinbox(frame3_right_1_left_2, textvariable = self.start2, command = self.input_, from_ = 0, to = 0, increment = 1, state = "disabled")
-        self.entry_start2.bind("<FocusIn>", lambda event: self.bind_return("start2"))
-        self.entry_start2.bind("<FocusOut>", lambda event: self.unbind_return("start2"))
+        self.entry_start2.bind("<FocusIn>", lambda event: self.bind_return_input_("start2"))
+        self.entry_start2.bind("<FocusOut>", lambda event: self.unbind_return_input_("start2"))
         self.entry_start2.place(relx = 0.25, rely = 0, relwidth = 0.25, relheight = 1)
         label_end2 = ttk.Label(frame3_right_1_left_2, text = "End 2")
         label_end2.config(anchor = "center")
         label_end2.place(relx = 0.5, rely = 0, relwidth = 0.25, relheight = 1)
         self.entry_end2 = ttk.Spinbox(frame3_right_1_left_2, textvariable = self.end2, command = self.input_, from_ = 0, to = 0, increment = 1, state = "disabled")
-        self.entry_end2.bind("<FocusIn>", lambda event: self.bind_return("end2"))
-        self.entry_end2.bind("<FocusOut>", lambda event: self.unbind_return("end2"))
+        self.entry_end2.bind("<FocusIn>", lambda event: self.bind_return_input_("end2"))
+        self.entry_end2.bind("<FocusOut>", lambda event: self.unbind_return_input_("end2"))
         self.entry_end2.place(relx = 0.75, rely = 0, relwidth = 0.25, relheight = 1)
         frame3_right_1_left_3 = ttk.Frame(frame3_right_1_left)
         frame3_right_1_left_3.place(relx = 0, rely = 0.5, relwidth = 1, relheight = 0.25)
@@ -602,78 +726,90 @@ class Dissolution_Combustion:
         label_temperature.config(padding = 2)
         label_temperature.place(relx = 0, rely = 0, relwidth = 0.25, relheight = float(1 / 7))
         self.entry_temperature = ttk.Entry(frame3_right_1_right, textvariable = self.temperature, state = "disabled")
-        self.entry_temperature.bind("<FocusOut>", lambda event: self.check_memory("temperature"))
+        self.entry_temperature.bind("<FocusIn>", lambda event: self.bind_return_check_memory("temperature"))
+        self.entry_temperature.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("temperature"))
         self.entry_temperature.place(relx = 0.25, rely = 0, relwidth = 0.25, relheight = float(1 / 7))
         label_water_volume = ttk.Label(frame3_right_1_right, text = "水体积(mL)")
         label_water_volume.config(padding = 2)
         label_water_volume.place(relx = 0.5, rely = 0, relwidth = 0.25, relheight = float(1 / 7))
         self.entry_water_volume = ttk.Entry(frame3_right_1_right, textvariable = self.water_volume, state = "disabled")
-        self.entry_water_volume.bind("<FocusOut>", self.check_memory)
+        self.entry_water_volume.bind("<FocusIn>", lambda event: self.bind_return_check_memory("water_volume"))
+        self.entry_water_volume.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("water_volume"))
         self.entry_water_volume.place(relx = 0.75, rely = 0, relwidth = 0.25, relheight = float(1 / 7))
         # 参数第二行
         label_water_density = ttk.Label(frame3_right_1_right, text = "水密度(g/mL)")
         label_water_density.config(padding = 2)
         label_water_density.place(relx = 0, rely = float(1 / 7), relwidth = 0.25, relheight = float(1 / 7))
         self.entry_water_density = ttk.Entry(frame3_right_1_right, textvariable = self.water_density, state = "disabled")
-        self.entry_water_density.bind("<FocusOut>", self.check_memory)
+        self.entry_water_density.bind("<FocusIn>", lambda event: self.bind_return_check_memory("water_density"))
+        self.entry_water_density.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("water_density"))
         self.entry_water_density.place(relx = 0.25, rely = float(1 / 7), relwidth = 0.25, relheight = float(1 / 7))
         label_water_capacity = ttk.Label(frame3_right_1_right, text = "水热容(J/gK)")
         label_water_capacity.config(padding = 2)
         label_water_capacity.place(relx = 0.5, rely = float(1 / 7), relwidth = 0.25, relheight = float(1 / 7))
         self.entry_water_capacity = ttk.Entry(frame3_right_1_right, textvariable = self.water_capacity, state = "disabled")
-        self.entry_water_capacity.bind("<FocusOut>", self.check_memory)
+        self.entry_water_capacity.bind("<FocusIn>", lambda event: self.bind_return_check_memory("water_capacity"))
+        self.entry_water_capacity.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("water_capacity"))
         self.entry_water_capacity.place(relx = 0.75, rely = float(1 / 7), relwidth = 0.25, relheight = float(1 / 7))
         # 参数第三行
-        self.label_combustible_mass = ttk.Label(frame3_right_1_right, text = "苯甲酸+棉线(g)")
-        self.label_combustible_mass.config(padding = 2)
-        self.label_combustible_mass.place(relx = 0, rely = float(2 / 7), relwidth = 0.25, relheight = float(1 / 7))
-        self.entry_combustible_mass = ttk.Entry(frame3_right_1_right, textvariable = self.combustible_mass, state = "disabled")
-        self.entry_combustible_mass.bind("<FocusOut>", self.check_memory)
-        self.entry_combustible_mass.place(relx = 0.25, rely = float(2 / 7), relwidth = 0.25, relheight = float(1 / 7))
         label_cotton_mass = ttk.Label(frame3_right_1_right, text = "棉线(g)")
         label_cotton_mass.config(padding = 2)
-        label_cotton_mass.place(relx = 0.5, rely = float(2 / 7), relwidth = 0.25, relheight = float(1 / 7))
+        label_cotton_mass.place(relx = 0, rely = float(2 / 7), relwidth = 0.25, relheight = float(1 / 7))
         self.entry_cotton_mass = ttk.Entry(frame3_right_1_right, textvariable = self.cotton_mass, state = "disabled")
-        self.entry_cotton_mass.bind("<FocusOut>", self.check_memory)
-        self.entry_cotton_mass.place(relx = 0.75, rely = float(2 / 7), relwidth = 0.25, relheight = float(1 / 7))
+        self.entry_cotton_mass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("cotton_mass"))
+        self.entry_cotton_mass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("cotton_mass"))
+        self.entry_cotton_mass.place(relx = 0.25, rely = float(2 / 7), relwidth = 0.25, relheight = float(1 / 7))
+        self.label_combustible_mass = ttk.Label(frame3_right_1_right, text = "苯甲酸+棉线(g)")
+        self.label_combustible_mass.config(padding = 2)
+        self.label_combustible_mass.place(relx = 0.5, rely = float(2 / 7), relwidth = 0.25, relheight = float(1 / 7))
+        self.entry_combustible_mass = ttk.Entry(frame3_right_1_right, textvariable = self.combustible_mass, state = "disabled")
+        self.entry_combustible_mass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("combustible_mass"))
+        self.entry_combustible_mass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("combustible_mass"))
+        self.entry_combustible_mass.place(relx = 0.75, rely = float(2 / 7), relwidth = 0.25, relheight = float(1 / 7))
         # 参数第四行
         label_Nickel_before_mass = ttk.Label(frame3_right_1_right, text = "镍丝(g)")
         label_Nickel_before_mass.config(padding = 2)
         label_Nickel_before_mass.place(relx = 0, rely = float(3 / 7), relwidth = 0.25, relheight = float(1 / 7))
         self.entry_Nickel_before_mass = ttk.Entry(frame3_right_1_right, textvariable = self.Nickel_before_mass, state = "disabled")
-        self.entry_Nickel_before_mass.bind("<FocusOut>", self.check_memory)
+        self.entry_Nickel_before_mass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("Nickel_before_mass"))
+        self.entry_Nickel_before_mass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("Nickel_before_mass"))
         self.entry_Nickel_before_mass.place(relx = 0.25, rely = float(3 / 7), relwidth = 0.25, relheight = float(1 / 7))
         label_Nickel_after_mass = ttk.Label(frame3_right_1_right, text = "燃烧后镍丝(g)")
         label_Nickel_after_mass.config(padding = 2)
         label_Nickel_after_mass.place(relx = 0.5, rely = float(3 / 7), relwidth = 0.25, relheight = float(1 / 7))
         self.entry_Nickel_after_mass = ttk.Entry(frame3_right_1_right, textvariable = self.Nickel_after_mass, state = "disabled")
-        self.entry_Nickel_after_mass.bind("<FocusOut>", self.check_memory)
+        self.entry_Nickel_after_mass.bind("<FocusIn>", lambda event: self.bind_return_check_memory("Nickel_after_mass"))
+        self.entry_Nickel_after_mass.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("Nickel_after_mass"))
         self.entry_Nickel_after_mass.place(relx = 0.75, rely = float(3 / 7), relwidth = 0.25, relheight = float(1 / 7))
         # 参数第五行
         label_benzoic_enthalpy = ttk.Label(frame3_right_1_right, text = "苯甲酸燃烧焓(kJ/mol)")
         label_benzoic_enthalpy.config(padding = 2)
         label_benzoic_enthalpy.place(relx = 0, rely = float(4 / 7), relwidth = 0.25, relheight = float(1 / 7))
         self.entry_benzoic_enthalpy = ttk.Entry(frame3_right_1_right, textvariable = self.benzoic_enthalpy, state = "disabled")
-        self.entry_benzoic_enthalpy.bind("<FocusOut>", self.check_memory)
+        self.entry_benzoic_enthalpy.bind("<FocusIn>", lambda event: self.bind_return_check_memory("benzoic_enthalpy"))
+        self.entry_benzoic_enthalpy.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("benzoic_enthalpy"))
         self.entry_benzoic_enthalpy.place(relx = 0.25, rely = float(4 / 7), relwidth = 0.25, relheight = float(1 / 7))
         label_cotton_heat = ttk.Label(frame3_right_1_right, text = "棉线燃烧热(J/g)")
         label_cotton_heat.config(padding = 2)
         label_cotton_heat.place(relx = 0.5, rely = float(4 / 7), relwidth = 0.25, relheight = float(1 / 7))
         self.entry_cotton_heat = ttk.Entry(frame3_right_1_right, textvariable = self.cotton_heat, state = "disabled")
-        self.entry_cotton_heat.bind("<FocusOut>", self.check_memory)
+        self.entry_cotton_heat.bind("<FocusIn>", lambda event: self.bind_return_check_memory("cotton_heat"))
+        self.entry_cotton_heat.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("cotton_heat"))
         self.entry_cotton_heat.place(relx = 0.75, rely = float(4 / 7), relwidth = 0.25, relheight = float(1 / 7))
         # 参数第六行
         label_Nickel_heat = ttk.Label(frame3_right_1_right, text = "镍丝燃烧热(J/g)")
         label_Nickel_heat.config(padding = 2)
         label_Nickel_heat.place(relx = 0, rely = float(5 / 7), relwidth = 0.25, relheight = float(1 / 7))
         self.entry_Nickel_heat = ttk.Entry(frame3_right_1_right, textvariable = self.Nickel_heat, state = "disabled")
-        self.entry_Nickel_heat.bind("<FocusOut>", self.check_memory)
+        self.entry_Nickel_heat.bind("<FocusIn>", lambda event: self.bind_return_check_memory("Nickel_heat"))
+        self.entry_Nickel_heat.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("Nickel_heat"))
         self.entry_Nickel_heat.place(relx = 0.25, rely = float(5 / 7), relwidth = 0.25, relheight = float(1 / 7))
         label_constant = ttk.Label(frame3_right_1_right, text = "量热计常数(J/K)")
         label_constant.config(padding = 2)
         label_constant.place(relx = 0.5, rely = float(5 / 7), relwidth = 0.25, relheight = float(1 / 7))
         self.entry_constant = ttk.Entry(frame3_right_1_right, textvariable = self.constant, state = "disabled")
-        self.entry_constant.bind("<FocusOut>", self.check_memory)
+        self.entry_constant.bind("<FocusIn>", lambda event: self.bind_return_check_memory("constant"))
+        self.entry_constant.bind("<FocusOut>", lambda event: self.unbind_return_check_memory("constant"))
         self.entry_constant.place(relx = 0.75, rely = float(5 / 7), relwidth = 0.25, relheight = float(1 / 7))
         # 参数第七行
         label_combustion_heat = ttk.Label(frame3_right_1_right, text = "恒容燃烧热(J/g)")
@@ -687,7 +823,7 @@ class Dissolution_Combustion:
         self.text_result.insert("end", "燃烧热模式使用说明\n")
         self.text_result.insert("end", "0. 点击左上角按钮切换模式\n")
         self.text_result.insert("end", "1. 点击文件(.csv)导入文件，建议文件名不包含中文字符。\n")
-        self.text_result.insert("end", "2. csv文件格式：第一行为标题行，第一列为升序的time(s)，第二列为Delta_T(K)；同一行数据间以半角逗号分隔。\n")
+        self.text_result.insert("end", "2. csv文件格式：共2列；前6行为参数名和参数数值；第7行为温度曲线的标题，第8行起为温度曲线数据，第1列为升序的time(s)，第2列为Delta_T(K)；同一行数据间以半角逗号分隔。\n")
         self.text_result.insert("end", "3. 调整Start 1 < End 1 < Start 2 < End 2至合适位置。\n")
         # 两种测量模式
         # 若修改为三种，需要修改self.Frame3_Combustion, self.combustion_mode, maths.calculate_combustion
@@ -721,7 +857,7 @@ class Dissolution_Combustion:
         self.mode = StringVar(value = "dissolution_regression")
         self.absolute_path = str()
         self.f.clear()
-        self.f.set_xlabel("$n$")
+        self.f.set_xlabel("$n_0$")
         self.f.set_ylabel("$Q_s$ (kJ/mol)")
         # 初始化内部变量
         button_mode_selected = StringVar(value = "溶解热拟合")
@@ -1025,7 +1161,7 @@ class Dissolution_Combustion:
             except TypeError:
                 pass
             if self.csv_state == 1:
-                self.csv_data.append([f"{Delta_t:.3f}", f"{Delta_T:.3f}", 0])
+                self.csv_data.append([f"{Delta_t:.3f}", f"{Delta_T:.3f}"])
             self.f.clear()
             self.f.set_xlabel("$t$ (s)")
             self.f.set_ylabel("$\Delta T$ (K)")
@@ -1062,7 +1198,10 @@ class Dissolution_Combustion:
         self.temp_file.write("time(s),Delta_T(K)\n")
         self.temp_file.flush()
         self.time_start = time.time()
-        self.csv_data = [["time(s)", "Delta_T(K)", "state"]]
+        if self.radiobutton_mode_selected.get() == "combustion":
+            self.csv_data = [["temperature(K)"], ["water_volume(mL)"], ["cotton_mass(g)"], ["combustible_mass(g)"], ["Nickel_before_mass(g)"], ["Nickel_after_mass(g)"], ["time(s)", "Delta_T(K)"]]
+        elif self.radiobutton_mode_selected.get() == "dissolution":
+            self.csv_data = [["temperature(K)"], ["water_volume(mL)"], ["solute_molarmass(g/mol)"], ["solute_mass(g)"], ["R1(Omega)"], ["R2(Omega)"], ["t1(s)"], ["t2(s)"], ["current(A)"], ["time(s)", "Delta_T(K)"]]
         self.csv_state = 1
         self.button_mode.configure(state = "disabled")
         self.button_data_start.config(state = "disabled")
@@ -1087,16 +1226,71 @@ class Dissolution_Combustion:
 
     # 停止记录数据
     def data_stop(self):
+        self.temp_file.write("stop recording\n")
+        self.temp_file.flush()
         self.csv_state = 0
+        self.text_result.config(state = "normal")
+        self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 停止记录\n")
+        self.text_result.config(state = "disabled")
+        self.text_result.see("end")
+        self.button_data_stop.config(state = "disabled")
+        self.button_data_finish.config(state = "normal")
+
+    # 开始加热 
+    def heat_start(self):
+        self.t1.set(f"{(time.time() - self.time_start):.3f}")
+        self.t1_memory = self.t1.get()
+        self.temp_file.write(f"start heating at {self.t1.get()} s\n")
+        self.temp_file.flush()
+        self.text_result.config(state = "normal")
+        self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 开始加热\n")
+        self.text_result.config(state = "disabled")
+        self.text_result.see("end")
+        self.button_heat_start.config(state = "disabled")
+        self.button_heat_stop.config(state = "normal")
+
+    # 停止加热
+    def heat_stop(self):
+        self.t2.set(f"{(time.time() - self.time_start):.3f}")
+        self.t2_memory = self.t2.get()
+        self.temp_file.write(f"stop heating at {self.t2.get()} s\n")
+        self.temp_file.flush()
+        self.csv_data[-1][2] = 2
+        self.text_result.config(state = "normal")
+        self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 停止加热\n")
+        self.text_result.config(state = "disabled")
+        self.text_result.see("end")
+        self.button_heat_stop.config(state = "disabled")
+        self.button_data_stop.config(state = "normal")
+
+    # 结束记录数据
+    def data_finish(self):
         self.csv_path = filedialog.asksaveasfilename(title = "保存数据", initialfile = f"{time.strftime('%Y%m%d%H%M%S', time.localtime())}{self.radiobutton_mode_selected.get()}data.csv", filetypes = [("CSV", ".csv")])
         if self.csv_path == "":
-            self.data_stop()
+            # self.data_finish()    # 递归调用，直到选择保存路径，但其间不能修改，所以注释掉
             return
+        if self.radiobutton_mode_selected.get() == "combustion":
+            self.csv_data[0].append(self.temperature.get())
+            self.csv_data[1].append(self.water_volume.get())
+            self.csv_data[2].append(self.cotton_mass.get())
+            self.csv_data[3].append(self.combustible_mass.get())
+            self.csv_data[4].append(self.Nickel_before_mass.get())
+            self.csv_data[5].append(self.Nickel_after_mass.get())
+        elif self.radiobutton_mode_selected.get() == "dissolution":
+            self.csv_data[0].append(self.temperature.get())
+            self.csv_data[1].append(self.water_volume.get())
+            self.csv_data[2].append(self.solute_molarmass.get())
+            self.csv_data[3].append(self.solute_mass.get())
+            self.csv_data[4].append(self.R1.get())
+            self.csv_data[5].append(self.R2.get())
+            self.csv_data[6].append(self.t1.get())
+            self.csv_data[7].append(self.t2.get())
+            self.csv_data[8].append(self.current.get())
         with open(self.csv_path, "w", encoding = "UTF-8", newline = "") as f:
             csv.writer(f).writerows(self.csv_data)
         showinfo(title = "提示", message = f"数据成功保存至{self.csv_path}")
         self.text_result.config(state = "normal")
-        self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 停止记录\n")
+        self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 数据保存成功\n")
         self.text_result.config(state = "disabled")
         self.text_result.see("end")
         self.temp_file.close()
@@ -1110,7 +1304,7 @@ class Dissolution_Combustion:
         self.f.set_xlabel("$t$ (s)")
         self.f.set_ylabel("$\Delta T$ (K)")
         self.treeview_csv.delete(*self.treeview_csv.get_children())
-        self.button_data_stop.config(state = "disabled")
+        self.button_data_finish.config(state = "disabled")
         self.button_mode.configure(state = "normal")
         self.button_data_start.config(state = "normal")
         self.button_comport.configure(state = "normal")
@@ -1119,30 +1313,6 @@ class Dissolution_Combustion:
         self.radiobutton_dissolution.config(state = "normal")
         self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
 
-    # 开始加热 
-    def heat_start(self):
-        self.temp_file.write("start heating\n")
-        self.temp_file.flush()
-        self.csv_data[-1][2] = 1
-        self.text_result.config(state = "normal")
-        self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 开始加热\n")
-        self.text_result.config(state = "disabled")
-        self.text_result.see("end")
-        self.button_heat_start.config(state = "disabled")
-        self.button_heat_stop.config(state = "normal")
-
-    # 停止加热
-    def heat_stop(self):
-        self.temp_file.write("stop heating\n")
-        self.temp_file.flush()
-        self.csv_data[-1][2] = 2
-        self.text_result.config(state = "normal")
-        self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 停止加热\n")
-        self.text_result.config(state = "disabled")
-        self.text_result.see("end")
-        self.button_heat_stop.config(state = "disabled")
-        self.button_data_stop.config(state = "normal")
-
     # 选择数据记录模式
     def data_mode(self):
         if self.radiobutton_mode_selected.get() == "dissolution":
@@ -1150,69 +1320,121 @@ class Dissolution_Combustion:
             self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 当前选择溶解热模式\n")
             self.text_result.config(state = "disabled")
             self.text_result.see("end")
+            self.water_volume.set("500.0")
+            self.water_volume_memory = self.water_volume.get()
+            self.entry_solute_molarmass.config(state = "normal")
+            self.entry_solute_mass.config(state = "normal")
+            self.entry_R1.config(state = "normal")
+            self.entry_R2.config(state = "normal")
+            self.entry_current.config(state = "normal")
+            self.entry_cotton_mass.config(state = "disabled")
+            self.entry_combustible_mass.config(state = "disabled")
+            self.entry_Nickel_before_mass.config(state = "disabled")
+            self.entry_Nickel_after_mass.config(state = "disabled")
         elif self.radiobutton_mode_selected.get() == "combustion":
             self.text_result.config(state = "normal")
             self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 当前选择燃烧热模式\n")
             self.text_result.config(state = "disabled")
             self.text_result.see("end")
+            self.water_volume.set("3000.0")
+            self.water_volume_memory = self.water_volume.get()
+            self.entry_solute_molarmass.config(state = "disabled")
+            self.entry_solute_mass.config(state = "disabled")
+            self.entry_R1.config(state = "disabled")
+            self.entry_R2.config(state = "disabled")
+            self.entry_current.config(state = "disabled")
+            self.entry_cotton_mass.config(state = "normal")
+            self.entry_combustible_mass.config(state = "normal")
+            self.entry_Nickel_before_mass.config(state = "normal")
+            self.entry_Nickel_after_mass.config(state = "normal")
 
     '''
     以下为溶解热/燃烧热模式的控制函数
     '''
     # 打开文件
     def open_file(self):
+        '''
+        数据文件的格式如下：
+            第1行为标题行，第2行为变量数据，第3行为时间序列的标题行，第4行开始为时间序列数据
+            1. 溶解热模式
+                变量依次为temperature(K), water_volume(mL), solute_molarmass(g/mol), solute_mass(g), R1(Ω), R2(Ω), t1(s), t2(s), current(A)
+            2. 燃烧热模式
+                变量依次为temperature(K), water_volume(mL), cotton_mass(g), combustible_mass(g), Nickel_before_mass(g), Nickel_after_mass(g)
+        '''
         absolute_path = filedialog.askopenfilename(filetypes = [("CSV", ".csv"), ("TXT", ".txt"), ("ALL", "*.*")])
         if absolute_path == "":
             return
         self.absolute_path = absolute_path
+        csv_skiprows = 1
         # 重置所有输入框的值，锁定所有输入框
         self.stringvars_start_end()
         self.entry_start1.config(textvariable = self.start1, state = "disabled")
         self.entry_end1.config(textvariable = self.end1, state = "disabled")
         self.entry_start2.config(textvariable = self.start2, state = "disabled")
         self.entry_end2.config(textvariable = self.end2, state = "disabled")
+        self.text_result.config(state = "normal")
+        self.text_result.delete(1.0, "end")
+        self.text_result.config(state = "disabled")
+        self.treeview_csv.delete(*self.treeview_csv.get_children())
+        # 重置绘图
+        self.f.clear()
+        self.f.set_xlabel("$t$ (s)")
+        self.f.set_ylabel("$\Delta T$ (K)")
+        self.canvas.draw()
+        PIL_image = pilImage.frombytes("RGB", self.canvas.get_width_height(), self.canvas.tostring_rgb())
+        tk_image = ImageTk.PhotoImage(PIL_image)
+        self.canvas_plot.configure(image = tk_image)
+        self.canvas_plot.image = tk_image
+        # 重置和读取参数
         if self.mode.get() == "combustion":
             self.stringvars_combustion()
             try:
+                # 尝试从输入文件读取参数
+                parameters_combustion = np.loadtxt(self.absolute_path, delimiter = ",", skiprows = 0, max_rows = 6, usecols = (1))
+                csv_skiprows += len(parameters_combustion)
+            except:
+                pass
+            try:
+                # 尝试获取量热计常数
                 self.constant.set(self.parameters_combustion[-2])
+                self.constant_memory = self.constant.get()
                 self.entry_constant.config(textvariable = self.constant)
             except:
                 pass
             self.entries_combustion(state = "disabled")
         elif self.mode.get() == "dissolution":
+            self.stringvars_dissolution()
+            try:
+                # 尝试从输入文件读取参数
+                parameters_dissolution = np.loadtxt(self.absolute_path, delimiter = ",", skiprows = 0, max_rows = 9, usecols = (1))
+                csv_skiprows += len(parameters_dissolution)
+            except:
+                pass
             self.entry_start3.config(textvariable = self.start3, state = "disabled")
             self.entry_end3.config(textvariable = self.end3, state = "disabled")
-            self.stringvars_dissolution()
             self.entries_dissolution(state = "disabled")
         # 锁定除file之外的所有button
         self.button_save.config(state = "disabled")
         self.button_remake.config(state = "disabled")
         self.button_integrate.config(state = "disabled")
-        # 读取文件
+        # 读取文件，加载变量
         self.file_name, self.extension = self.file_name_extension(self.absolute_path)
-        self.csv = np.loadtxt(self.absolute_path, delimiter = ",", skiprows = 1)
+        try:
+            self.csv = np.loadtxt(self.absolute_path, delimiter = ",", skiprows = csv_skiprows)
+        except ValueError:
+            self.text_result.config(state = "normal")
+            self.text_result.insert("end", f"{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())} 读取{self.absolute_path}失败，请检查文件格式\n")
+            self.text_result.config(state = "disabled")
+            showwarning(title = "警告", message = f"读取{self.absolute_path}失败，请检查文件格式")
+            return
         # 将csv中的数据按时间排序
         self.csv_time = self.csv[:, 0]
         self.csv_time = np.argsort(self.csv_time)
         self.csv = self.csv[self.csv_time]
         self.len_csv = len(self.csv)
-        # 将csv中的数据加载到treeview_csv中，如果是溶解热数据则找出第三列为1和2的标志点并更新entry
-        self.text_result.config(state = "normal")
-        self.text_result.delete(1.0, "end")
-        self.text_result.config(state = "disabled")
-        self.treeview_csv.delete(*self.treeview_csv.get_children())
+        # 将csv中的数据加载到treeview_csv中
         for i in range(self.len_csv):
             self.treeview_csv.insert("", i, values = (i, f"{self.csv[i][0]:.3f}", f"{self.csv[i][1]:.3f}"))
-            if self.mode.get() == "dissolution":
-                try:
-                    if self.csv[i][2] == 1:
-                        self.t1.set(str(self.csv[i][0]))
-                        self.t1_memory = self.t1.get()
-                    elif self.csv[i][2] == 2:
-                        self.t2.set(str(self.csv[i][0]))
-                        self.t2_memory = self.t2.get()
-                except:
-                    pass
         # 更新文件名
         self.label_path.config(text = self.file_name)
         # 清除图像
@@ -1223,6 +1445,45 @@ class Dissolution_Combustion:
         self.y_smooth = self.smooth(self.x_smooth)
         # 更新输入框范围
         self.remake_file()
+        # 参数赋值，并检查导入的参数是否合法
+        if self.mode.get() == "combustion":
+            try:
+                self.temperature.set(parameters_combustion[0])
+                self.water_volume.set(parameters_combustion[1])
+                self.cotton_mass.set(parameters_combustion[2])
+                self.combustible_mass.set(parameters_combustion[3])
+                self.Nickel_before_mass.set(parameters_combustion[4])
+                self.Nickel_after_mass.set(parameters_combustion[5])
+                self.check_memory("temperature")
+                self.check_memory("water_volume")
+                self.check_memory("cotton_mass")
+                self.check_memory("combustible_mass")
+                self.check_memory("Nickel_before_mass")
+                self.check_memory("Nickel_after_mass")
+            except: # 此时数据文件仅为时序数据，没有其他参数
+                pass
+        elif self.mode.get() == "dissolution":
+            try:
+                self.temperature.set(parameters_dissolution[0])
+                self.water_volume.set(parameters_dissolution[1])
+                self.solute_molarmass.set(parameters_dissolution[2])
+                self.solute_mass.set(parameters_dissolution[3])
+                self.R1.set(parameters_dissolution[4])
+                self.R2.set(parameters_dissolution[5])
+                self.t1.set(parameters_dissolution[6])
+                self.t2.set(parameters_dissolution[7])
+                self.current.set(parameters_dissolution[8])
+                self.check_memory("temperature")
+                self.check_memory("water_volume")
+                self.check_memory("solute_molarmass")
+                self.check_memory("solute_mass")
+                self.check_memory("R1")
+                self.check_memory("R2")
+                self.check_memory("t1")
+                self.check_memory("t2")
+                self.check_memory("current")
+            except: # 此时数据文件仅为时序数据，没有其他参数
+                pass
 
     # 重置窗口状态
     def remake_file(self):
@@ -1262,7 +1523,7 @@ class Dissolution_Combustion:
             if self.radiobutton_mode_selected.get() == "constant":
                 self.entry_constant.config(state = "readonly")
                 self.entry_combustion_heat.config(state = "disabled")
-            else:
+            elif self.radiobutton_mode_selected.get() == "combustible":
                 self.entry_combustion_heat.config(state = "readonly")
         elif self.mode.get() == "dissolution":
             try:
@@ -1395,6 +1656,7 @@ class Dissolution_Combustion:
             if self.Start1 != int(self.start1.get()) or self.End1 != int(self.end1.get()) or self.Start2 != int(self.start2.get()) or self.End2 != int(self.end2.get()):
                 if self.radiobutton_mode_selected.get() == "constant":
                     self.constant.set("")
+                    self.constant_memory = ""
                     self.entry_constant.config(textvariable = self.constant)
                 elif self.radiobutton_mode_selected.get() == "combustible" or self.radiobutton_mode_selected.get() == "liquid":
                     self.combustion_heat.set("")
@@ -1539,6 +1801,7 @@ class Dissolution_Combustion:
             # 更新计算结果
             if self.radiobutton_mode_selected.get() == "constant":
                 self.constant.set(self.parameters_combustion[-2])
+                self.constant_memory = self.constant.get()
                 self.entry_constant.config(textvariable = self.constant)
             elif self.radiobutton_mode_selected.get() == "combustible" or self.radiobutton_mode_selected.get() == "liquid":
                 self.combustion_heat.set(self.parameters_combustion[-1])
@@ -1573,35 +1836,32 @@ class Dissolution_Combustion:
         self.button_save.config(state = "normal")
 
     # 为spinbox绑定回车键
-    def bind_return(self, event):
-        if event == "start1":
-            self.entry_start1.bind("<Return>", lambda event: self.input_())
-        elif event == "end1":
-            self.entry_end1.bind("<Return>", lambda event: self.input_())
-        elif event == "start2":
-            self.entry_start2.bind("<Return>", lambda event: self.input_())
-        elif event == "end2":
-            self.entry_end2.bind("<Return>", lambda event: self.input_())
-        elif event == "start3":
-            self.entry_start3.bind("<Return>", lambda event: self.input_())
-        elif event == "end3":
-            self.entry_end3.bind("<Return>", lambda event: self.input_())
-
+    def bind_return_input_(self, event):
+        # exec对命名空间的操作很复杂，不要动这个函数和其中func涉及到的函数
+        name = event
+        entry = f"self.entry_{name}"
+        func = f"self.input_()"
+        exec(f"{entry}.bind('<Return>', lambda event: {func})", locals())
+    
     # 为spinbox解除回车键绑定
-    def unbind_return(self, event):
-        if event == "start1":
-            self.entry_start1.unbind("<Return>")
-        if event == "end1":
-            self.entry_end1.unbind("<Return>")
-        if event == "start2":
-            self.entry_start2.unbind("<Return>")
-        if event == "end2":
-            self.entry_end2.unbind("<Return>")
-        if event == "start3":
-            self.entry_start3.unbind("<Return>")
-        if event == "end3":
-            self.entry_end3.unbind("<Return>")
+    def unbind_return_input_(self, event):
+        name = event
+        entry = f"self.entry_{name}"
+        exec(f"{entry}.unbind('<Return>')")
         self.input_()
+
+    def bind_return_check_memory(self, event):
+        # exec对命名空间的操作很复杂，不要动这个函数和其中func涉及到的函数
+        name = event
+        entry = f"self.entry_{name}"
+        func = f"self.check_memory(name)"
+        exec(f"{entry}.bind('<Return>', lambda event: {func})", locals())
+
+    def unbind_return_check_memory(self, event):
+        name = event
+        entry = f"self.entry_{name}"
+        exec(f"{entry}.unbind('<Return>')")
+        self.check_memory(name)
 
     # 检查输入参数是否合法
     def check_memory(self, event):
@@ -1614,13 +1874,20 @@ class Dissolution_Combustion:
                 return False
         # 检查输入是否为数字，若不是则恢复上一次的输入
         def _check_memory(memory: str, realtime: StringVar):
-            # 只保留数字、小数点和负号
-            realtime.set(re.sub(r"[^\d.-]+", "", realtime.get()))
+            # 只保留数字、小数点和四则运算符号，支持加减乘除和幂运算
+            realtime.set(re.sub(r"[^\d+*/().-]+", "", realtime.get()))
             # 若输入与原先不同
             if realtime.get() != memory:
-                # 若输入不是数字，则恢复上一次的输入
+                # 若输入不是数字，则判断是否为合法算式
                 if not is_number(realtime.get()):
-                    realtime.set(memory)
+                    try:
+                        realtime.set(str(eval(realtime.get())))
+                        if float(realtime.get()) == float(memory):
+                            realtime.set(memory)
+                        else:
+                            memory = realtime.get()
+                    except SyntaxError: # 此时输入的不是数字或者合法算式
+                        realtime.set(memory)
                 # 若输入是数字，则更新记忆
                 else:
                     memory = realtime.get()
@@ -1631,66 +1898,83 @@ class Dissolution_Combustion:
                 elif self.mode.get() == "combustion":
                     if self.radiobutton_mode_selected.get() == "constant":
                         self.constant.set("")
+                        self.constant_memory = self.constant.get()
                         self.entry_constant.config(textvariable = self.constant)
                     elif self.radiobutton_mode_selected.get() == "combustible" or self.radiobutton_mode_selected.get() == "liquid":
                         self.combustion_heat.set("")
                         self.entry_combustion_heat.config(textvariable = self.combustion_heat)
-                self.plot_(code = "regression")
+                if self.mode.get() == "dissolution" or self.mode.get() == "combustion":
+                    self.plot_(code = "regression")
             return memory
-        # 每次检查所有输入框
-        self.temperature_memory = _check_memory(self.temperature_memory, self.temperature)
-        self.water_volume_memory = _check_memory(self.water_volume_memory, self.water_volume)
-        self.water_density_memory = _check_memory(self.water_density_memory, self.water_density)
-        self.water_capacity_memory = _check_memory(self.water_capacity_memory, self.water_capacity)
-        if self.mode.get() == "dissolution":
-            self.solute_mass_memory = _check_memory(self.solute_mass_memory, self.solute_mass)
-            self.solute_molarmass_memory = _check_memory(self.solute_molarmass_memory, self.solute_molarmass)
-            self.R1_memory = _check_memory(self.R1_memory, self.R1)
-            self.R2_memory = _check_memory(self.R2_memory, self.R2)
-            self.t1_memory = _check_memory(self.t1_memory, self.t1)
-            self.t2_memory = _check_memory(self.t2_memory, self.t2)
-            self.current_memory = _check_memory(self.current_memory, self.current)
-        elif self.mode.get() == "combustion":
-            self.combustible_mass_memory = _check_memory(self.combustible_mass_memory, self.combustible_mass)
-            self.cotton_mass_memory = _check_memory(self.cotton_mass_memory, self.cotton_mass)
-            self.Nickel_before_mass_memory = _check_memory(self.Nickel_before_mass_memory, self.Nickel_before_mass)
-            self.Nickel_after_mass_memory = _check_memory(self.Nickel_after_mass_memory, self.Nickel_after_mass)
-            self.benzoic_enthalpy_memory = _check_memory(self.benzoic_enthalpy_memory, self.benzoic_enthalpy)
-            self.cotton_heat_memory = _check_memory(self.cotton_heat_memory, self.cotton_heat)
-            self.Nickel_heat_memory = _check_memory(self.Nickel_heat_memory, self.Nickel_heat)
-            if self.radiobutton_mode_selected.get() == "combustible" or self.radiobutton_mode_selected.get() == "liquid":
-                self.constant_memory = _check_memory(self.constant_memory, self.constant)
-        # 如果更改的是温度，更新水的密度和热容
+        # 检查输入框
+        memory = f"self.{event}_memory"
+        realtime = f"self.{event}"
+        exec(f"{memory} = _check_memory({memory}, {realtime})") # 危险代码
         if event == "temperature":
+            # 如果更改的是温度，更新水的密度和热容
             temperature = "{:.2f}".format(float(self.temperature.get()))
             try:
                 self.water_density.set(water_density_smooth[temperature])
+                self.water_density_memory = self.water_density.get()
             except:
                 pass
             try:
                 self.water_capacity.set(water_capacity_smooth[temperature])
+                self.water_capacity_memory = self.water_capacity.get()
             except:
-                pass
-            '''
+                pass        
+        '''
+        if event == "temperature":
+            self.temperature_memory = _check_memory(self.temperature_memory, self.temperature)
+            # 如果更改的是温度，更新水的密度和热容
+            temperature = "{:.2f}".format(float(self.temperature.get()))
             try:
-                water_density_smooth = np.loadtxt(os.path.dirname(os.path.abspath(__file__)) + "/water_density_smooth.dat", dtype = str)
-                for i in range(len(water_density_smooth)):
-                    if temperature == water_density_smooth[i][0]:
-                        self.water_density.set(water_density_smooth[i][1])
-                        break
+                self.water_density.set(water_density_smooth[temperature])
+                self.water_density_memory = self.water_density.get()
             except:
-                # 缺失水密度数据
                 pass
             try:
-                water_capacity_smooth = np.loadtxt(os.path.dirname(os.path.abspath(__file__)) + "/water_capacity_smooth.dat", dtype = str)
-                for i in range(len(water_capacity_smooth)):
-                    if temperature == water_capacity_smooth[i][0]:
-                        self.water_capacity.set(water_capacity_smooth[i][1])
-                        break
+                self.water_capacity.set(water_capacity_smooth[temperature])
+                self.water_capacity_memory = self.water_capacity.get()
             except:
-                # 缺失水热容数据
                 pass
-            '''
+        elif event == "water_volume":
+            self.water_volume_memory = _check_memory(self.water_volume_memory, self.water_volume)
+        elif event == "water_density":
+            self.water_density_memory = _check_memory(self.water_density_memory, self.water_density)
+        elif event == "water_capacity":
+            self.water_capacity_memory = _check_memory(self.water_capacity_memory, self.water_capacity)
+        elif event == "solute_mass":
+            self.solute_mass_memory = _check_memory(self.solute_mass_memory, self.solute_mass)
+        elif event == "solute_molarmass":
+            self.solute_molarmass_memory = _check_memory(self.solute_molarmass_memory, self.solute_molarmass)
+        elif event == "R1":
+            self.R1_memory = _check_memory(self.R1_memory, self.R1)
+        elif event == "R2":
+            self.R2_memory = _check_memory(self.R2_memory, self.R2)
+        elif event == "t1":
+            self.t1_memory = _check_memory(self.t1_memory, self.t1)
+        elif event == "t2":
+            self.t2_memory = _check_memory(self.t2_memory, self.t2)
+        elif event == "current":
+            self.current_memory = _check_memory(self.current_memory, self.current)
+        elif event == "combustible_mass":
+            self.combustible_mass_memory = _check_memory(self.combustible_mass_memory, self.combustible_mass)
+        elif event == "cotton_mass":
+            self.cotton_mass_memory = _check_memory(self.cotton_mass_memory, self.cotton_mass)
+        elif event == "Nickel_before_mass":
+            self.Nickel_before_mass_memory = _check_memory(self.Nickel_before_mass_memory, self.Nickel_before_mass)
+        elif event == "Nickel_after_mass":
+            self.Nickel_after_mass_memory = _check_memory(self.Nickel_after_mass_memory, self.Nickel_after_mass)
+        elif event == "benzoic_enthalpy":
+            self.benzoic_enthalpy_memory = _check_memory(self.benzoic_enthalpy_memory, self.benzoic_enthalpy)
+        elif event == "cotton_heat":
+            self.cotton_heat_memory = _check_memory(self.cotton_heat_memory, self.cotton_heat)
+        elif event == "Nickel_heat":
+            self.Nickel_heat_memory = _check_memory(self.Nickel_heat_memory, self.Nickel_heat)
+        elif event == "constant":
+            self.constant_memory = _check_memory(self.constant_memory, self.constant)
+        '''
 
     # 选择燃烧热计算模式
     def combustion_mode(self):
@@ -1763,7 +2047,7 @@ class Dissolution_Combustion:
         self.text_result.delete("1.0", "end")
         self.text_result.insert("end", "使用说明\n")
         self.text_result.insert("end", "1. 点击文件(.csv)导入文件，默认文件名为dissolution.csv。\n")
-        self.text_result.insert("end", "2. 导入的csv文件由本程序的溶解热模式生成。文件第一行为标题行，此后每一行必须按照实际实验顺序排列，且只能出现一次。如格式有误请自行编辑。\n")
+        self.text_result.insert("end", "2. 导入的csv文件由本程序的溶解热模式生成。文件第1行为标题行，此后每一行必须按照实际实验顺序排列，且只能出现1次。如格式有误请自行编辑。\n")
         self.text_result.insert("end", "3. 拟合方程为Qs = Qs0 × a × n0 / (1 + a × n0)。\n")
         self.text_result.insert("end", "4. 点击保存(.png)保存图片。\n\n")
         self.text_result.config(state = "disabled")
@@ -1790,7 +2074,7 @@ class Dissolution_Combustion:
             self.treeview_csv.insert("", i, values = (i, f"{self.n[i]:.4g}", f"{self.Qs[i]:.2f}"))
         # 更新绘图
         self.f.clear()
-        self.f.scatter(self.n, self.Qs, s = 50, marker = '+', color = 'dimgray', label = "$Q_s$-$n$ data points")
+        self.f.scatter(self.n, self.Qs, s = 50, marker = '+', color = 'dimgray', label = "$Q_s$-$n_0$ data points")
         # 非线性拟合方程
         n_plot = np.arange(0, max(self.n) * 1.2, self.dx)
         Qs_plot = (self.Qs0 * self.a * n_plot) / (1 + self.a * n_plot)
@@ -1801,7 +2085,7 @@ class Dissolution_Combustion:
         Qs_plot = n_plot / (Qs0 * a) + 1 / Qs0
         '''
         self.f.plot(n_plot, Qs_plot, color = '#1F77B4', label = "fitted curve")
-        self.f.set_xlabel("$n$")
+        self.f.set_xlabel("$n_0$")
         self.f.set_ylabel("$Q_s$ (kJ/mol)")
         self.f.legend()
         self.canvas.draw()
