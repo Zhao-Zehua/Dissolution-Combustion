@@ -118,7 +118,9 @@ class Dissolution_Combustion:
         # 如果屏幕分辨率过低，那么调整最小窗口大小
         if screen_height < min_height or screen_width < min_width:
             self.root.minsize(screen_width, screen_height)
-            self.root.geometry(f"{screen_width}x{screen_height}")
+            default_height = screen_height
+            default_width = screen_width
+            self.root.geometry(f"{default_width}x{default_height}")
         # 如果屏幕分辨率满足要求，但默认宽高不能完全显示，那么不需要调整窗口大小
         # 如果屏幕分辨率满足要求，且默认宽高可以完全显示，那么调整窗口大小
         elif screen_height * 0.75 > min_height and screen_height * 0.75 * 4 / 3 > min_width:
@@ -126,11 +128,15 @@ class Dissolution_Combustion:
             default_height = int(screen_height * 0.75)
             default_width = int(screen_height * 0.75 * 4 / 3)
             self.root.geometry(f"{default_width}x{default_height}")
+        # 使窗口在左上角显示
+        self.root.geometry("+0+0")
         # 初始化各个Frame
         self.Frame1 = ttk.Frame(self.root)
         self.Frame2 = ttk.Frame(self.root)
         self.Frame3 = ttk.Frame(self.root)
         self.Frame4 = ttk.Frame(self.root)
+        # 初始化所有button
+        self.buttons()
         # 默认显示Frame1
         self.Frame1_Data()
         self.canvas_plot.config(image = tk_image)
@@ -202,30 +208,46 @@ class Dissolution_Combustion:
         self.button_comport.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
         frame1_left_3 = ttk.Frame(frame1_left, borderwidth = 2)
         frame1_left_3.place(relx = 0, rely = 0.1, relwidth = 1, relheight = 0.05)
-        self.button_comport_upgrade = ttk.Button(frame1_left_3, text = "刷新串口", command = self.get_comport)
+        self.button_comport_upgrade = ttk.Button(frame1_left_3, text = "刷新串口(Ctrl-Shift-R)", command = self.get_comport)
         self.button_comport_upgrade.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-Shift-r>", self.button_shortcut)
+        self.root.bind("<Control-Shift-R>", self.button_shortcut)
         frame1_left_4 = ttk.Frame(frame1_left)
         frame1_left_4.place(relx = 0, rely = 0.15, relwidth = 1, relheight = 0.05)
-        self.radiobutton_dissolution = ttk.Radiobutton(frame1_left_4, text = "溶解热", value = "dissolution", variable = self.radiobutton_mode_selected, command = self.data_mode)
+        self.radiobutton_dissolution = ttk.Radiobutton(frame1_left_4, text = "溶解热(Alt-D)", value = "dissolution", variable = self.radiobutton_mode_selected, command = self.data_mode)
         self.radiobutton_dissolution.place(relx = 0.25, rely = 0.5, anchor = "center")
-        self.radiobutton_combustion = ttk.Radiobutton(frame1_left_4, text = "燃烧热", value = "combustion", variable = self.radiobutton_mode_selected, command = self.data_mode)
+        self.root.bind("<Alt-d>", self.button_shortcut)
+        self.root.bind("<Alt-D>", self.button_shortcut)
+        self.radiobutton_combustion = ttk.Radiobutton(frame1_left_4, text = "燃烧热(Alt-C)", value = "combustion", variable = self.radiobutton_mode_selected, command = self.data_mode)
+        self.root.bind("<Alt-c>", self.button_shortcut)
+        self.root.bind("<Alt-C>", self.button_shortcut)
         self.radiobutton_combustion.place(relx = 0.75, rely = 0.5, anchor = "center")        
         frame1_left_5 = ttk.Frame(frame1_left, borderwidth = 2)
         frame1_left_5.place(relx = 0, rely = 0.2, relwidth = 1, relheight = 0.05)
-        self.button_data_start = ttk.Button(frame1_left_5, text = "开始记录", command = self.data_start, state = "disabled")
+        self.button_data_start = ttk.Button(frame1_left_5, text = "开始记录(Ctrl-Q)", command = self.data_start, state = "disabled")
         self.button_data_start.place(relx = 0, rely = 0, relwidth = 0.5, relheight = 1)
-        self.button_data_stop = ttk.Button(frame1_left_5, text = "停止记录", command = self.data_stop, state = "disabled")
+        self.root.bind("<Control-q>", self.button_shortcut)
+        self.root.bind("<Control-Q>", self.button_shortcut)
+        self.button_data_stop = ttk.Button(frame1_left_5, text = "停止记录(Ctrl-R)", command = self.data_stop, state = "disabled")
         self.button_data_stop.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
+        self.root.bind("<Control-r>", self.button_shortcut)
+        self.root.bind("<Control-R>", self.button_shortcut)
         frame1_left_6 = ttk.Frame(frame1_left, borderwidth = 2)
         frame1_left_6.place(relx = 0, rely = 0.25, relwidth = 1, relheight = 0.05)
-        self.button_heat_start = ttk.Button(frame1_left_6, text = "开始加热", command = self.heat_start, state = "disabled")
+        self.button_heat_start = ttk.Button(frame1_left_6, text = "开始加热(Ctrl-W)", command = self.heat_start, state = "disabled")
         self.button_heat_start.place(relx = 0, rely = 0, relwidth = 0.5, relheight = 1)
-        self.button_heat_stop = ttk.Button(frame1_left_6, text = "停止加热", command = self.heat_stop, state = "disabled")
+        self.root.bind("<Control-w>", self.button_shortcut)
+        self.root.bind("<Control-W>", self.button_shortcut)
+        self.button_heat_stop = ttk.Button(frame1_left_6, text = "停止加热(Ctrl-E)", command = self.heat_stop, state = "disabled")
         self.button_heat_stop.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
+        self.root.bind("<Control-e>", self.button_shortcut)
+        self.root.bind("<Control-E>", self.button_shortcut)
         frame1_left_7 = ttk.Frame(frame1_left, borderwidth = 2)
         frame1_left_7.place(relx = 0, rely = 0.3, relwidth = 1, relheight = 0.05)
-        self.button_data_finish = ttk.Button(frame1_left_7, text = "保存数据", command = self.data_finish, state = "disabled")
-        self.button_data_finish.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.button_save = ttk.Button(frame1_left_7, text = "保存数据(Ctrl-S)", command = self.save_data, state = "disabled")
+        self.button_save.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-s>", self.button_shortcut)
+        self.root.bind("<Control-S>", self.button_shortcut)
         frame1_left_8 = ttk.Frame(frame1_left, borderwidth = 2)
         frame1_left_8.place(relx = 0, rely = 0.35, relwidth = 1, relheight = 0.6)
         self.treeview_csv = ttk.Treeview(frame1_left_8, show = "headings", columns = ("time(s)", "Delta_T(K)"))
@@ -385,12 +407,16 @@ class Dissolution_Combustion:
         self.button_mode.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
         frame2_left_2 = ttk.Frame(frame2_left, borderwidth = 2)
         frame2_left_2.place(relx = 0, rely = 0.05, relwidth = 1, relheight = 0.05)
-        self.button_open = ttk.Button(frame2_left_2, text = "文件(.csv)", command = self.open_file)
+        self.button_open = ttk.Button(frame2_left_2, text = "文件(Ctrl-F)", command = self.open_file)
         self.button_open.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-f>", self.button_shortcut)
+        self.root.bind("<Control-F>", self.button_shortcut)
         frame2_left_3 = ttk.Frame(frame2_left, borderwidth = 2)
         frame2_left_3.place(relx = 0, rely = 0.1, relwidth = 1, relheight = 0.05)
-        self.button_save = ttk.Button(frame2_left_3, text = "保存(.png)", command = self.save_file, state = "disabled")
+        self.button_save = ttk.Button(frame2_left_3, text = "保存(Ctrl-S)", command = self.save_file, state = "disabled")
         self.button_save.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-s>", self.button_shortcut)
+        self.root.bind("<Control-S>", self.button_shortcut)
         frame2_left_4 = ttk.Frame(frame2_left, borderwidth = 2)
         frame2_left_4.place(relx = 0, rely = 0.15, relwidth = 1, relheight = 0.8)
         self.treeview_csv = ttk.Treeview(frame2_left_4, show = "headings", columns = ("index", "time(s)", "Delta_T(K)"))
@@ -470,12 +496,16 @@ class Dissolution_Combustion:
         frame2_right_1_left_4.place(relx = 0, rely = 0.75, relwidth = 1, relheight = 0.25)
         frame2_right_1_left_4_left = ttk.Frame(frame2_right_1_left_4, borderwidth = 2)
         frame2_right_1_left_4_left.place(relx = 0, rely = 0, relwidth = 0.5, relheight = 1)
-        self.button_remake = ttk.Button(frame2_right_1_left_4_left, text = "重置", command = self.remake_file, state = "disabled")
+        self.button_remake = ttk.Button(frame2_right_1_left_4_left, text = "重置(Ctrl-Z)", command = self.remake_file, state = "disabled")
         self.button_remake.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-z>", self.button_shortcut)
+        self.root.bind("<Control-Z>", self.button_shortcut)
         frame2_right_1_left_4_right = ttk.Frame(frame2_right_1_left_4, borderwidth = 2)
         frame2_right_1_left_4_right.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
-        self.button_integrate = ttk.Button(frame2_right_1_left_4_right, text = "计算", command = self.calculate_integration, state = "disabled")
+        self.button_integrate = ttk.Button(frame2_right_1_left_4_right, text = "计算(Ctrl-D)", command = self.calculate_integration, state = "disabled")
         self.button_integrate.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-d>", self.button_shortcut)
+        self.root.bind("<Control-D>", self.button_shortcut)
         frame2_right_1_right = ttk.Frame(frame2_right_1_paned, relief = "sunken", borderwidth = 1, padding = 2)
         frame2_right_1_paned.add(frame2_right_1_right, weight = 70)
         # 参数第一行
@@ -626,12 +656,16 @@ class Dissolution_Combustion:
         self.button_mode.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
         frame3_left_2 = ttk.Frame(frame3_left, borderwidth = 2)
         frame3_left_2.place(relx = 0, rely = 0.05, relwidth = 1, relheight = 0.05)
-        self.button_open = ttk.Button(frame3_left_2, text = "文件(.csv)", command = self.open_file)
+        self.button_open = ttk.Button(frame3_left_2, text = "文件(Ctrl-F)", command = self.open_file)
         self.button_open.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-f>", self.button_shortcut)
+        self.root.bind("<Control-F>", self.button_shortcut)
         frame3_left_3 = ttk.Frame(frame3_left, borderwidth = 2)
         frame3_left_3.place(relx = 0, rely = 0.1, relwidth = 1, relheight = 0.05)
-        self.button_save = ttk.Button(frame3_left_3, text = "保存(.png)", command = self.save_file, state = "disabled")
+        self.button_save = ttk.Button(frame3_left_3, text = "保存(Ctrl-S)", command = self.save_file, state = "disabled")
         self.button_save.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-s>", self.button_shortcut)
+        self.root.bind("<Control-S>", self.button_shortcut)
         frame3_left_4 = ttk.Frame(frame3_left, borderwidth = 2)
         frame3_left_4.place(relx = 0, rely = 0.15, relwidth = 1, relheight = 0.8)
         self.treeview_csv = ttk.Treeview(frame3_left_4, show = "headings", columns = ("index", "time(s)", "Delta_T(K)"))
@@ -695,20 +729,28 @@ class Dissolution_Combustion:
         frame3_right_1_left_3.place(relx = 0, rely = 0.5, relwidth = 1, relheight = 0.25)
         frame3_right_1_left_3_left = ttk.Frame(frame3_right_1_left_3, borderwidth = 2)
         frame3_right_1_left_3_left.place(relx = 0, rely = 0, relwidth = 0.5, relheight = 1)
-        self.button_remake = ttk.Button(frame3_right_1_left_3_left, text = "重置", command = self.remake_file, state = "disabled")
+        self.button_remake = ttk.Button(frame3_right_1_left_3_left, text = "重置(Ctrl-Z)", command = self.remake_file, state = "disabled")
         self.button_remake.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-z>", self.button_shortcut)
+        self.root.bind("<Control-Z>", self.button_shortcut)
         frame3_right_1_left_3_right = ttk.Frame(frame3_right_1_left_3, borderwidth = 2)
         frame3_right_1_left_3_right.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
-        self.button_integrate = ttk.Button(frame3_right_1_left_3_right, text = "计算", command = self.calculate_integration, state = "disabled")
+        self.button_integrate = ttk.Button(frame3_right_1_left_3_right, text = "计算(Ctrl-D)", command = self.calculate_integration, state = "disabled")
         self.button_integrate.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-d>", self.button_shortcut)
+        self.root.bind("<Control-D>", self.button_shortcut)
         frame3_right_1_left_4 = ttk.Frame(frame3_right_1_left)
         frame3_right_1_left_4.place(relx = 0, rely = 0.75, relwidth = 1, relheight = 0.25)
         # 两种测量模式
         # 若修改为三种，需要修改self.Frame3_Combustion, self.combustion_mode, maths.calculate_combustion
-        self.radiobutton_constant = ttk.Radiobutton(frame3_right_1_left_4, text = "常数", value = "constant", variable = self.radiobutton_mode_selected, command = self.combustion_mode, state = "disabled")
+        self.radiobutton_constant = ttk.Radiobutton(frame3_right_1_left_4, text = "常数(Alt-E)", value = "constant", variable = self.radiobutton_mode_selected, command = self.combustion_mode, state = "disabled")
         self.radiobutton_constant.place(relx = 0.25, rely = 0.5, anchor = "center")
-        self.radiobutton_combustible = ttk.Radiobutton(frame3_right_1_left_4, text = "样品", value = "combustible", variable = self.radiobutton_mode_selected, command = self.combustion_mode, state = "disabled")
-        self.radiobutton_combustible.place(relx = 0.75, rely = 0.5, anchor = "center")        
+        self.root.bind("<Alt-e>", self.button_shortcut)
+        self.root.bind("<Alt-E>", self.button_shortcut)
+        self.radiobutton_combustible = ttk.Radiobutton(frame3_right_1_left_4, text = "样品(Alt-S)", value = "combustible", variable = self.radiobutton_mode_selected, command = self.combustion_mode, state = "disabled")
+        self.radiobutton_combustible.place(relx = 0.75, rely = 0.5, anchor = "center")  
+        self.root.bind("<Alt-s>", self.button_shortcut)
+        self.root.bind("<Alt-S>", self.button_shortcut)      
         '''
         # 三种测量模式
         # 若修改为两种，需要修改self.Frame3_Combustion, self.combustion_mode, self.remake_file, maths.calculate_combustion
@@ -874,12 +916,16 @@ class Dissolution_Combustion:
         self.button_mode.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
         frame4_left_2 = ttk.Frame(frame4_left, borderwidth = 2)
         frame4_left_2.place(relx = 0, rely = 0.05, relwidth = 1, relheight = 0.05)
-        self.button_open = ttk.Button(frame4_left_2, text = "文件(.csv)", command = self.open_dissolution_file)
+        self.button_open = ttk.Button(frame4_left_2, text = "文件(Ctrl-F)", command = self.open_dissolution_file)
         self.button_open.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-f>", self.button_shortcut)
+        self.root.bind("<Control-F>", self.button_shortcut)
         frame4_left_3 = ttk.Frame(frame4_left, borderwidth = 2)
         frame4_left_3.place(relx = 0, rely = 0.1, relwidth = 1, relheight = 0.05)
-        self.button_save = ttk.Button(frame4_left_3, text = "保存(.png)", command = self.save_dissolution_file, state = "disabled")
+        self.button_save = ttk.Button(frame4_left_3, text = "保存(Ctrl-S)", command = self.save_dissolution_file, state = "disabled")
         self.button_save.place(relx = 0, rely = 0, relwidth = 1, relheight = 1)
+        self.root.bind("<Control-s>", self.button_shortcut)
+        self.root.bind("<Control-S>", self.button_shortcut)
         frame4_left_4 = ttk.Frame(frame4_left, borderwidth = 2)
         frame4_left_4.place(relx = 0, rely = 0.15, relwidth = 1, relheight = 0.8)
         self.treeview_csv = ttk.Treeview(frame4_left_4, show = "headings", columns = ("index", "n0", "Qs(kJ/mol)"))
@@ -924,6 +970,22 @@ class Dissolution_Combustion:
     '''
     以下为变量声明函数
     '''
+    # 所有button
+    def buttons(self):
+        self.button_comport_upgrade = None
+        self.radiobutton_dissolution = None
+        self.radiobutton_combustion = None
+        self.button_data_start = None
+        self.button_heat_start = None
+        self.button_heat_stop = None
+        self.button_data_stop = None
+        self.button_save = None
+        self.button_open = None
+        self.button_remake = None
+        self.button_integrate = None
+        self.radiobutton_constant = None
+        self.radiobutton_combustible = None
+
     # 溶解热和燃烧热计算中的起止点
     def stringvars_start_end(self):
         self.start1 = StringVar()
@@ -1019,6 +1081,7 @@ class Dissolution_Combustion:
         self.Frame2.destroy()
         self.Frame3.destroy()
         self.Frame4.destroy()
+        self.root.unbind_all("<Key>")
         if event == "数据记录":
             self.Frame1_Data()
         elif event == "溶解热":
@@ -1046,11 +1109,53 @@ class Dissolution_Combustion:
         self.canvas_plot.config(image = tk_image)
         self.canvas_plot.image = tk_image
 
+    def button_shortcut(self, event):
+        states = {\
+            8: "", \
+            9: "Shift-", \
+            10: "Caps-", \
+            11: "Shift-", \
+            # 11: "Shift-Caps-", \
+            12: "Control-", \
+            13: "Control-Shift-", \
+            14: "Control-", \
+            # 14: "Control-Caps-", \
+            15: "Control-Shift-", \
+            # 15: "Control-Shift-Caps-", \
+            131080: "Alt-", \
+            131081: "Alt-Shift-", \
+            131082: "Alt-", \
+            # 131082: "Alt-Caps-", \
+            131083: "Alt-Shift" \
+            #131083: "Alt-Shift-Caps-" \
+            }
+        keyboard = f"<{states[event.state]}{event.keysym.lower()}>"
+        shortcuts = {\
+            "<Control-Shift-r>": self.button_comport_upgrade, \
+            "<Alt-d>": self.radiobutton_dissolution, \
+            "<Alt-c>": self.radiobutton_combustion, \
+            "<Control-q>": self.button_data_start, \
+            "<Control-w>": self.button_heat_start, \
+            "<Control-e>": self.button_heat_stop, \
+            "<Control-r>": self.button_data_stop, \
+            "<Control-s>": self.button_save, \
+            "<Control-f>": self.button_open, \
+            "<Control-z>": self.button_remake, \
+            "<Control-d>": self.button_integrate, \
+            "<Alt-e>": self.radiobutton_constant, \
+            "<Alt-s>": self.radiobutton_combustible \
+            }
+        button = shortcuts[keyboard]
+        if str(button["state"]) == "normal":
+            button.invoke()
+
     '''
     以下为数据记录模式的控制函数
     '''
     # 获取可用串口
     def get_comport(self):
+        if str(self.button_comport_upgrade["state"]) != "normal":
+            return
         # 禁用按钮
         self.button_comport_upgrade.config(state = "disabled")
         self.button_data_start.config(state = "disabled")
@@ -1150,6 +1255,8 @@ class Dissolution_Combustion:
             try:
                 self.temp_file.write(f"{Delta_t:.3f},{Delta_T:.3f}\n")
                 self.temp_file.flush()
+                if self.csv_state == 1:
+                    self.csv_data.append([f"{Delta_t:.3f}", f"{Delta_T:.3f}"])
                 self.treeview_csv.insert("", "end", values = (f"{Delta_t:.3f}", f"{Delta_T:.3f}"))
                 self.treeview_csv.yview_moveto(1)
                 self.temp_Delta_t.append(Delta_t)
@@ -1159,9 +1266,10 @@ class Dissolution_Combustion:
                 if len(self.temp_Delta_T) >= self.plot_max_points:
                     self.temp_Delta_T = self.temp_Delta_T[-self.plot_max_points:]
             except TypeError:
-                pass
-            if self.csv_state == 1:
-                self.csv_data.append([f"{Delta_t:.3f}", f"{Delta_T:.3f}"])
+                self.text_result.config(state = "normal")
+                self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 串口读取数据失败，请检查串口连接状态。\n")
+                self.text_result.config(state = "disabled")
+                self.text_result.see("end")
             self.f.clear()
             self.f.set_xlabel("$t$ (s)")
             self.f.set_ylabel("$\Delta T$ (K)")
@@ -1234,7 +1342,7 @@ class Dissolution_Combustion:
         self.text_result.config(state = "disabled")
         self.text_result.see("end")
         self.button_data_stop.config(state = "disabled")
-        self.button_data_finish.config(state = "normal")
+        self.button_save.config(state = "normal")
 
     # 开始加热 
     def heat_start(self):
@@ -1255,7 +1363,6 @@ class Dissolution_Combustion:
         self.t2_memory = self.t2.get()
         self.temp_file.write(f"stop heating at {self.t2.get()} s\n")
         self.temp_file.flush()
-        self.csv_data[-1][2] = 2
         self.text_result.config(state = "normal")
         self.text_result.insert("end", f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 停止加热\n")
         self.text_result.config(state = "disabled")
@@ -1264,10 +1371,10 @@ class Dissolution_Combustion:
         self.button_data_stop.config(state = "normal")
 
     # 结束记录数据
-    def data_finish(self):
+    def save_data(self):
         self.csv_path = filedialog.asksaveasfilename(title = "保存数据", initialfile = f"{time.strftime('%Y%m%d%H%M%S', time.localtime())}{self.radiobutton_mode_selected.get()}data.csv", filetypes = [("CSV", ".csv")])
         if self.csv_path == "":
-            # self.data_finish()    # 递归调用，直到选择保存路径，但其间不能修改，所以注释掉
+            # self.save_data()    # 递归调用，直到选择保存路径，但其间不能修改，所以注释掉
             return
         if self.radiobutton_mode_selected.get() == "combustion":
             self.csv_data[0].append(self.temperature.get())
@@ -1304,7 +1411,7 @@ class Dissolution_Combustion:
         self.f.set_xlabel("$t$ (s)")
         self.f.set_ylabel("$\Delta T$ (K)")
         self.treeview_csv.delete(*self.treeview_csv.get_children())
-        self.button_data_finish.config(state = "disabled")
+        self.button_save.config(state = "disabled")
         self.button_mode.configure(state = "normal")
         self.button_data_start.config(state = "normal")
         self.button_comport.configure(state = "normal")
@@ -1355,7 +1462,7 @@ class Dissolution_Combustion:
     def open_file(self):
         '''
         数据文件的格式如下：
-            第1行为标题行，第2行为变量数据，第3行为时间序列的标题行，第4行开始为时间序列数据
+            前若干行为变量行，每行包括变量名和数值2列；此后1行为标题行；随后若干行为时间-温差数值。
             1. 溶解热模式
                 变量依次为temperature(K), water_volume(mL), solute_molarmass(g/mol), solute_mass(g), R1(Ω), R2(Ω), t1(s), t2(s), current(A)
             2. 燃烧热模式
@@ -1365,6 +1472,7 @@ class Dissolution_Combustion:
         if absolute_path == "":
             return
         self.absolute_path = absolute_path
+        self.file_name, self.extension = self.file_name_extension(self.absolute_path)
         csv_skiprows = 1
         # 重置所有输入框的值，锁定所有输入框
         self.stringvars_start_end()
@@ -1385,43 +1493,36 @@ class Dissolution_Combustion:
         tk_image = ImageTk.PhotoImage(PIL_image)
         self.canvas_plot.configure(image = tk_image)
         self.canvas_plot.image = tk_image
-        # 重置和读取参数
+        # 重置并读取参数
+        csv_all = np.loadtxt(self.absolute_path, delimiter = ",", dtype = str)
         if self.mode.get() == "combustion":
             self.stringvars_combustion()
+            self.entries_combustion(state = "disabled")
             try:
                 # 尝试从输入文件读取参数
-                parameters_combustion = np.loadtxt(self.absolute_path, delimiter = ",", skiprows = 0, max_rows = 6, usecols = (1))
+                parameters_combustion = csv_all[0 : 6, 1].astype(float)
                 csv_skiprows += len(parameters_combustion)
             except:
                 pass
-            try:
-                # 尝试获取量热计常数
-                self.constant.set(self.parameters_combustion[-2])
-                self.constant_memory = self.constant.get()
-                self.entry_constant.config(textvariable = self.constant)
-            except:
-                pass
-            self.entries_combustion(state = "disabled")
         elif self.mode.get() == "dissolution":
             self.stringvars_dissolution()
-            try:
-                # 尝试从输入文件读取参数
-                parameters_dissolution = np.loadtxt(self.absolute_path, delimiter = ",", skiprows = 0, max_rows = 9, usecols = (1))
-                csv_skiprows += len(parameters_dissolution)
-            except:
-                pass
             self.entry_start3.config(textvariable = self.start3, state = "disabled")
             self.entry_end3.config(textvariable = self.end3, state = "disabled")
             self.entries_dissolution(state = "disabled")
+            try:
+                # 尝试从输入文件读取参数
+                parameters_dissolution = csv_all[0 : 9, 1].astype(float)
+                csv_skiprows += len(parameters_dissolution)
+            except:
+                pass
         # 锁定除file之外的所有button
         self.button_save.config(state = "disabled")
         self.button_remake.config(state = "disabled")
         self.button_integrate.config(state = "disabled")
         # 读取文件，加载变量
-        self.file_name, self.extension = self.file_name_extension(self.absolute_path)
         try:
-            self.csv = np.loadtxt(self.absolute_path, delimiter = ",", skiprows = csv_skiprows)
-        except ValueError:
+            self.csv = csv_all[csv_skiprows:].astype(float)
+        except:
             self.text_result.config(state = "normal")
             self.text_result.insert("end", f"{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())} 读取{self.absolute_path}失败，请检查文件格式\n")
             self.text_result.config(state = "disabled")
@@ -1886,7 +1987,7 @@ class Dissolution_Combustion:
                             realtime.set(memory)
                         else:
                             memory = realtime.get()
-                    except SyntaxError: # 此时输入的不是数字或者合法算式
+                    except: # 此时输入的不是数字或者合法算式
                         realtime.set(memory)
                 # 若输入是数字，则更新记忆
                 else:
@@ -2119,6 +2220,9 @@ class Dissolution_Combustion:
                 writer.writerow(["n0", "Qs(kJ/mol)"])
                 n0_Qs = np.stack((self.n, self.Qs), axis = 1)
                 writer.writerows(n0_Qs)
+                writer.writerow([])
+                writer.writerow(["Qs0(kJ/mol)", "a"])
+                writer.writerow([self.Qs0, self.a])
                 writer.writerow([])
                 writer.writerows(self.dissolution_test_data)
         except PermissionError:
