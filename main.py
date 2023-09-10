@@ -51,7 +51,9 @@ import os
 import shutil
 import sys
 # 自建库
-import gui
+
+from gui import App
+
 
 # 可调参数
 dx = 0.1    # 积分、绘图步长
@@ -76,7 +78,7 @@ if __name__ == "__main__":
     # 如果是运行的py文件，则获取py文件所在目录的绝对路径
     else:
         py_path = os.path.dirname(os.path.abspath(__file__))
-    gui.Dissolution_Combustion(dx, time_interval, plot_max_points, port_timeout, std_limit, time_lower_limit, time_upper_limit, width_height_inches, dpi, py_path)
+    App(dx, time_interval, plot_max_points, port_timeout, std_limit, time_lower_limit, time_upper_limit, width_height_inches, dpi, py_path)
     # 清除缓存文件夹
     pycache_dir = py_path + '/__pycache__'
     if os.path.exists(pycache_dir):
