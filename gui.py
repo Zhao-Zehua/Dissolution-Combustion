@@ -322,7 +322,8 @@ class StringEntriesWidget(ttk.Frame):
 
         def set_var(self, value):
             self.var.set(value=value)
-            self.check_memory()
+            self.cached.set(value=value)
+            #self.check_memory()
         # 检查输入参数是否合法
 
         def check_memory(self):
@@ -354,7 +355,8 @@ class StringEntriesWidget(ttk.Frame):
                     # 若输入是数字，则更新记忆
                     else:
                         memory.set(realtime.get())
-                        DATA_CONFIG["app"].data_changed()
+                        if self.name not in ("dissolution_heat(kJ)","constant(J/K)","combustion_heat(J/g)"):
+                            DATA_CONFIG["screen"].change_entry()
             # 检查输入框
             memory = self.cached
             realtime = self.var
@@ -446,6 +448,7 @@ class SpinEntriesWidget(ttk.Frame):
                 self.var.set(self.cached.get())
             else:
                 self.cached.set(self.var.get())
+                DATA_CONFIG["screen"].change_entry()
                 DATA_CONFIG["screen"].calc_regression()
                 DATA_CONFIG['screen'].plot_regression()
                 DATA_CONFIG['screen'].plot_frame.show()
@@ -745,6 +748,13 @@ class Screen(ttk.Frame):
                 self.strEntries.set_value(k,str(parameters_dict[k]))
         except:
             pass
+        if DATA_CONFIG["mode"].get()=="溶解热":
+            self.strEntries.set_value("dissolution_heat(kJ)","")
+        elif DATA_CONFIG["mode"].get()=="燃烧热":
+            if DATA_CONFIG["combustion_mode"].get() == "constant":
+                self.strEntries.set_value("constant(J/K)","")
+            elif DATA_CONFIG["combustion_mode"].get() == "combustible" or self.radiobutton_mode_selected.get() == "liquid":
+                self.strEntries.set_value("combustion_heat(J/g)","")
     
     def save_file(self):
         result_file_name="dissolution.csv" if DATA_CONFIG["mode"].get()=="溶解热" else "combustion.csv"
@@ -783,6 +793,15 @@ class Screen(ttk.Frame):
                 self.strEntries.set_states("disabled",["combustion_heat(J/g)"])
             elif DATA_CONFIG["combustion_mode"].get() == "combustible":
                 self.strEntries.set_states("readonly",["combustion_heat(J/g)"])
+    
+    def change_entry(self):
+        if DATA_CONFIG["mode"].get()=="溶解热":
+            self.strEntries.set_value("dissolution_heat(kJ)","")
+        elif DATA_CONFIG["mode"].get()=="燃烧热":
+            if DATA_CONFIG["combustion_mode"].get() == "constant":
+                self.strEntries.set_value("constant(J/K)","")
+            elif DATA_CONFIG["combustion_mode"].get() == "combustible" or self.radiobutton_mode_selected.get() == "liquid":
+                self.strEntries.set_value("combustion_heat(J/g)","")
 
     def calc_regression(self):
         # 判断csv是否已读入
@@ -1090,6 +1109,10 @@ class Screen1_Data(Screen):
         self.entries_frame.set_all_states("disabled")
         self.entries_frame.set_states("normal",self.entry_state[self.measure_mode.get()])
 
+    def change_mode(self,*args):
+        if self.comport is not None:
+            self.comport.close()
+        super().change_mode()
 
     def get_port(self):
         if str(self.button_get_comport["state"]) != "normal":
@@ -1555,17 +1578,20 @@ class Screen4_Fit(Screen):
         self.text_frame.clear()
         self.text_frame.append(self.INFORM_TEXT)
         self.file_name, self.extension = file_name_extension(self.absolute_path)
-        dissolution_csv = np.loadtxt(self.absolute_path, delimiter = ",", skiprows = 1, usecols = (12, 13, 15, 16, 22))
+        with open(self.absolute_path,"r",encoding="utf-8") as file_obj:
+            reader=csv.reader(file_obj)
+            titles=[]
+            parameters={}
+            for row in reader:
+                if not parameters:
+                    titles=row.copy()
+                    for title in row:
+                        parameters[title]=[]
+                else:
+                    for title,val in zip(titles,row):
+                        parameters[title].append(val)
+        dissolution_csv = [list(map(float,row)) for row in zip(*[parameters[title] for title in ["water_volume(mL)", "water_density(g/mL)", "solute_mass(g)", "solute_molarmass(g/mol)", "dissolution_heat(kJ)"]])]
         len_csv = len(dissolution_csv)
-        '''
-        csv文件的一行有如下数据
-        "filename", "Start1", "End 1", "Start 2", "End 2", "Start 3", "End 3", "T1_left", "T1_right", "T2_left", "T2_right", \
-        "room_temperature(K)", "water_volume(mL)", "water_density(g/mL)", "water_capacity(J/gK)", \
-        "solute_mass(g)", "solute_molarmass(g/mol)", "R1(Ω)", "R2(Ω)", "t1(s)", "t2(s)", "current(A)", "dissolution_heat(kJ)
-        需要提取的数据有每一行的：
-        water_volume(mL), water_density(g/mL), solute_mass(g), solute_molarmass(g/mol), dissolution_heat(kJ)
-        即从0开始编号的12、13、15、16、22列
-        '''
         dissolution_parameters = []
         for i in range(len_csv):
             dissolution_parameters.append([dissolution_csv[i][0], dissolution_csv[i][1], dissolution_csv[i][2], dissolution_csv[i][3], dissolution_csv[i][4]])
