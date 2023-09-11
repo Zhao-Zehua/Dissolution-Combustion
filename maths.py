@@ -86,22 +86,22 @@ def Reynolds(csv, Start1: int, End1: int, Start2: int, End2: int, dx: float):  #
     return x0, S1, S2
 
 # 溶解热计算
-def calculate_dissolution(parameters: list):
+def calculate_dissolution(parameters: dict):
     '''
     从图形界面获取参数
     parameters = [file_name_extension, Start1, End1, Start2, End2, Start3, End3, T1_left, T1_right, T2_left, T2_right, temperature, water_volume, water_density, water_capacity, solute_mass, solute_molarmass, R1, R2, t1, t2, current, dissolution_heat]
     '''
     # 获取参数
     try:
-        T1_left = float(parameters[7])
-        T1_right = float(parameters[8])
-        T2_left = float(parameters[9])
-        T2_right = float(parameters[10])
-        R1 = float(parameters[17])
-        R2 = float(parameters[18])
-        t1 = float(parameters[19])
-        t2 = float(parameters[20])
-        current = float(parameters[21])
+        T1_left = float(parameters["T1_left"])
+        T1_right = float(parameters["T1_right"])
+        T2_left = float(parameters["T2_left"])
+        T2_right = float(parameters["T2_right"])
+        R1 = float(parameters["R1(Omega)"])
+        R2 = float(parameters["R2(Omega)"])
+        t1 = float(parameters["t1(s)"])
+        t2 = float(parameters["t2(s)"])
+        current = float(parameters["current(A)"])
     except ValueError:
         pass
     # 计算溶解热
@@ -109,7 +109,7 @@ def calculate_dissolution(parameters: list):
     t = t2 - t1
     Q = current ** 2 * R * t
     dissolution_heat = Q * (T1_left - T1_right) / (T2_right - T2_left) / 1000   # 单位：kJ
-    parameters[-1] = f"{dissolution_heat:.4f}"
+    parameters["dissolution_heat(kJ)"] = f"{dissolution_heat:.4f}"
     return parameters
 
 # 溶解热回归
@@ -234,26 +234,26 @@ def dissolution_heat_test(Qs0, a, n_test = [200, 150, 100, 80, 50]):
     return data
 
 # 燃烧热计算
-def calculate_combustion(parameters: list, code: str):
+def calculate_combustion(parameters: dict, code: str):
     '''
     从图形界面获取参数
     parameters = [file_name_extension, Start1, End1, Start2, End2, T_left, T_right, temperature, water_volume, water_density, water_capacity, combustible_mass, cotton_mass, Nickel_before_mass, Nickel_after_mass, benzoic_enthalpy, cotton_heat, Nickel_heat, constant, combustion_heat]
     '''
     # 获取参数
     try:
-        T_left = float(parameters[5])
-        T_right = float(parameters[6])
-        temperature = float(parameters[7])
-        water_volume = float(parameters[8])
-        water_density = float(parameters[9])
-        water_capacity = float(parameters[10])
-        combustible_mass = float(parameters[11])
-        cotton_mass = float(parameters[12])
-        Nickel_before_mass = float(parameters[13])
-        Nickel_after_mass = float(parameters[14])
-        benzoic_enthalpy = float(parameters[15])
-        cotton_heat = float(parameters[16])
-        Nickel_heat = float(parameters[17])
+        T_left = float(parameters["T_left(K)"])
+        T_right = float(parameters["T_right(K)"])
+        temperature = float(parameters["room_temperature(K)"])
+        water_volume = float(parameters["water_volume(mL)"])
+        water_density = float(parameters["water_density(g/mL)"])
+        water_capacity = float(parameters["water_capacity(J/gK)"])
+        combustible_mass = float(parameters["combustible_mass(g)"])
+        cotton_mass = float(parameters["cotton_mass(g)"])
+        Nickel_before_mass = float(parameters["Nickel_before_mass(g)"])
+        Nickel_after_mass = float(parameters["Nickel_after_mass(g)"])
+        benzoic_enthalpy = float(parameters["benzoic_enthalpy(kJ/mol)"])
+        cotton_heat = float(parameters["cotton_heat(J/g)"])
+        Nickel_heat = float(parameters["Nickel_heat(J/g)"])
     except ValueError:
         pass
     # 计算燃烧热
@@ -265,14 +265,14 @@ def calculate_combustion(parameters: list, code: str):
         Q_benzoic = (combustible_mass - cotton_mass) * benzoic_heat    # 单位J
         Q = Q_cotton + Q_Nickel + Q_benzoic
         constant = -Q / (T_right - T_left) - water_total_capacity
-        parameters[-2] = f"{constant:.1f}"
+        parameters["constant(J/K)"] = f"{constant:.1f}"
     # 两种测量模式
     # 若修改为三种，需要修改self.Frame3_Combustion, self.combustion_mode, self.remake_file, maths.calculate_combustion
     elif code == "combustible":
-        constant = float(parameters[18])
+        constant = float(parameters["constant(J/K)"])
         Q_x = -Q_Nickel - Q_cotton - (constant + water_total_capacity) * (T_right - T_left)    # 单位J
         combustion_heat = Q_x / (combustible_mass - cotton_mass)    # 单位J/g
-        parameters[-1] = f"{combustion_heat:.1f}"
+        parameters["combustion_heat(J/g)"] = f"{combustion_heat:.1f}"
         '''
     # 三种测量模式
     # 若修改为两种，需要修改self.Frame3_Combustion, self.combustion_mode, self.remake_file, maths.calculate_combustion
@@ -283,21 +283,21 @@ def calculate_combustion(parameters: list, code: str):
         parameters[-1] = f"{combustion_heat:.1f}"
         '''
     elif code == "liquid":
-        constant = float(parameters[18])
+        constant = float(parameters["constant(J/K)"])
         Q_x = -Q_Nickel - Q_cotton - (constant + water_total_capacity) * (T_right - T_left)    # 单位J
         combustion_heat = Q_x / combustible_mass    # 单位J/g
-        parameters[-1] = f"{combustion_heat:.1f}"
-    return parameters
+        parameters["combustion_heat(J/g)"] = f"{combustion_heat:.1f}"
 
 # 寻找初始起止点
 def find_start_end_point(csv, code: str, time_lower_limit: int or float, time_upper_limit: int or float, std_limit: float): # 建议时间下限30s，时间上限40s，标准差上限0.01
     # 第一列为index，第二列为标准差
     standard_deviation = []
     points = []
-    count = 4 if code == "combustion" else 6
+    count = 4 if code == "燃烧热" else 6
     platform = True
     start_index = 0
     end_index = 1
+    if csv is None: return 
     while end_index < len(csv):
         time_range = csv[end_index][0] - csv[start_index][0]
         if time_range > time_upper_limit:
