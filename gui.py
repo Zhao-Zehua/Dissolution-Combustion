@@ -56,6 +56,7 @@ def dct2cols(cols,dct):
 SHORTCUT_CODE={
     "Shift":0x1,
     "Control":0x4,
+    "Command":0x8,
     "Alt":0x20000
 }
 
@@ -584,10 +585,16 @@ class CombustionSpinEntriesWidget(SpinEntriesWidget):
         mode_frame=ttk.Frame(self)
         mode_frame.place(relx=0,rely=0.75,relwidth=1,relheight=0.25)
         DATA_CONFIG["combustion_mode"]=StringVar()
-        self.radiobutton_constant=ttk.Radiobutton(mode_frame, text = "常数(Alt-E)", value = "constant", variable = DATA_CONFIG["combustion_mode"], command = self.select_mode)
-        self.radiobutton_constant.place(relx = 0.25, rely = 0.5, anchor = "center")
-        self.radiobutton_combustible = ttk.Radiobutton(mode_frame, text = "样品(Alt-S)", value = "combustible", variable = DATA_CONFIG["combustion_mode"], command = self.select_mode)
-        self.radiobutton_combustible.place(relx = 0.75, rely = 0.5, anchor = "center")  
+        if sys.platform.startswith('win'):
+            self.radiobutton_constant=ttk.Radiobutton(mode_frame, text = "常数(Alt-E)", value = "constant", variable = DATA_CONFIG["combustion_mode"], command = self.select_mode)
+            self.radiobutton_constant.place(relx = 0.25, rely = 0.5, anchor = "center")
+            self.radiobutton_combustible = ttk.Radiobutton(mode_frame, text = "样品(Alt-S)", value = "combustible", variable = DATA_CONFIG["combustion_mode"], command = self.select_mode)
+            self.radiobutton_combustible.place(relx = 0.75, rely = 0.5, anchor = "center")
+        elif sys.platform.startswith('darwin'):
+            self.radiobutton_constant=ttk.Radiobutton(mode_frame, text = "常数(Cmd-E)", value = "constant", variable = DATA_CONFIG["combustion_mode"], command = self.select_mode)
+            self.radiobutton_constant.place(relx = 0.25, rely = 0.5, anchor = "center")
+            self.radiobutton_combustible = ttk.Radiobutton(mode_frame, text = "样品(Cmd-S)", value = "combustible", variable = DATA_CONFIG["combustion_mode"], command = self.select_mode)
+            self.radiobutton_combustible.place(relx = 0.75, rely = 0.5, anchor = "center")
         DATA_CONFIG["combustion_mode"].set("constant")
     
     def select_mode(self):
@@ -661,17 +668,23 @@ class Screen(ttk.Frame):
 
     def button_shortcut(self,event):
         modifier=""
-        if event.state&SHORTCUT_CODE["Alt"]:
-            modifier+="Alt-"
-        if event.state&SHORTCUT_CODE["Control"]:
-            modifier+="Control-"
-        if event.state&SHORTCUT_CODE["Shift"]:
-            modifier+="Shift-"
+        if event.state & SHORTCUT_CODE["Shift"]:
+            modifier += "Shift-"
+        if event.state & SHORTCUT_CODE["Control"]:
+            modifier += "Control-"
+        if sys.platform.startswith('win'):
+            if event.state & SHORTCUT_CODE["Alt"]:
+                modifier += "Alt-"
+        elif sys.platform.startswith('darwin'):
+            if event.state & SHORTCUT_CODE["Command"]:
+                modifier += "Command-"
         keyboard = f"<{modifier}{event.keysym.lower()}>"
         shortcuts = {\
-            "<Control-Shift-r>": self.button_get_comport, \
+            "<Shift-Control-r>": self.button_get_comport, \
             "<Alt-d>": self.radiobutton_dissolution, \
             "<Alt-c>": self.radiobutton_combustion, \
+            "<Command-d>": self.radiobutton_dissolution, \
+            "<Command-c>": self.radiobutton_combustion, \
             "<Control-q>": self.button_data_start, \
             "<Control-w>": self.button_heat_start, \
             "<Control-e>": self.button_heat_stop, \
@@ -681,7 +694,9 @@ class Screen(ttk.Frame):
             "<Control-z>": self.button_remake, \
             "<Control-d>": self.button_integrate, \
             "<Alt-e>": self.radiobutton_constant, \
-            "<Alt-s>": self.radiobutton_combustible \
+            "<Alt-s>": self.radiobutton_combustible, \
+            "<Command-e>": self.radiobutton_constant, \
+            "<Command-s>": self.radiobutton_combustible \
             }
         if keyboard in shortcuts:
             button = shortcuts[keyboard]
@@ -1015,12 +1030,16 @@ class Screen1_Data(Screen):
     t2="0.000"
 
     SHORTCUTS=[
-        "<Control-Shift-r>",
-        "<Control-Shift-R>",
+        "<Shift-Control-r>",
+        "<Shift-Control-R>",
         "<Alt-d>",
         "<Alt-D>",
         "<Alt-c>",
         "<Alt-C>",
+        "<Command-d>",
+        "<Command-D>",
+        "<Command-c>",
+        "<Command-C>",
         "<Control-q>",
         "<Control-Q>",
         "<Control-r>",
@@ -1060,10 +1079,16 @@ class Screen1_Data(Screen):
         tmp=ttk.Frame(self.left_frame)
         tmp.place(relx = 0, rely = 0.15, relwidth = 1, relheight = 0.05)
         self.measure_mode=StringVar()
-        self.radiobutton_dissolution=ttk.Radiobutton(tmp, text = "溶解热(Alt-D)", value = "dissolution", variable = self.measure_mode, command = self.change_measure_mode)
-        self.radiobutton_dissolution.place(relx = 0.25, rely = 0.5, anchor = "center")
-        self.radiobutton_combustion=ttk.Radiobutton(tmp, text = "燃烧热(Alt-C)", value = "combustion", variable = self.measure_mode, command = self.change_measure_mode)
-        self.radiobutton_combustion.place(relx = 0.75, rely = 0.5, anchor = "center")
+        if sys.platform.startswith('win'):
+            self.radiobutton_dissolution=ttk.Radiobutton(tmp, text = "溶解热(Alt-D)", value = "dissolution", variable = self.measure_mode, command = self.change_measure_mode)
+            self.radiobutton_dissolution.place(relx = 0.25, rely = 0.5, anchor = "center")
+            self.radiobutton_combustion=ttk.Radiobutton(tmp, text = "燃烧热(Alt-C)", value = "combustion", variable = self.measure_mode, command = self.change_measure_mode)
+            self.radiobutton_combustion.place(relx = 0.75, rely = 0.5, anchor = "center")
+        elif sys.platform.startswith('darwin'):
+            self.radiobutton_dissolution=ttk.Radiobutton(tmp, text = "溶解热(Cmd-D)", value = "dissolution", variable = self.measure_mode, command = self.change_measure_mode)
+            self.radiobutton_dissolution.place(relx = 0.25, rely = 0.5, anchor = "center")
+            self.radiobutton_combustion=ttk.Radiobutton(tmp, text = "燃烧热(Cmd-C)", value = "combustion", variable = self.measure_mode, command = self.change_measure_mode)
+            self.radiobutton_combustion.place(relx = 0.75, rely = 0.5, anchor = "center")
         self.measure_mode.set("dissolution")
         tmp=ttk.Frame(self.left_frame,**FLAT_SUBFRAME_CONFIG)
         tmp.place(relx=0,rely=0.2,relwidth=1,relheight=0.05)
@@ -1211,6 +1236,8 @@ class Screen1_Data(Screen):
 
     def change_measure_mode(self):
         self.set_entry_state()
+        self.text_frame.append(f"{time.strftime('%Y.%m.%d %H:%M:%S', time.localtime())} 当前选择{'燃烧热' if self.measure_mode.get() == 'combustion' else '溶解热'}模式\n")
+        self.text_frame.see("end")
 
     def read_comport(self):
         try:
@@ -1471,7 +1498,11 @@ class Screen3_Combustion(Screen):
         "<Alt-E>",
         "<Alt-e>",
         "<Alt-S>",
-        "<Alt-s>"
+        "<Alt-s>",
+        "<Command-E>",
+        "<Command-e>",
+        "<Command-S>",
+        "<Command-s>"
     ]
 
     def __init__(self):
@@ -1706,7 +1737,7 @@ class App:
         DATA_CONFIG["time_upper_limit"]=time_upper_limit
         DATA_CONFIG["width_height_inches"]=width_height_inches
         DATA_CONFIG["dpi"]=dpi
-        DATA_CONFIG["window"]=ttk.Window(themename="sandstone",title="溶解热-燃烧热数据采集与处理软件")
+        DATA_CONFIG["window"]=ttk.Window(themename="sandstone",title="溶解热-燃烧热数据采集与处理软件 v2.2.0")
         try:
             if sys.platform.startswith('darwin'):
                 # Mac系统
