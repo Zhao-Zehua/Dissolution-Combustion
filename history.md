@@ -4,7 +4,7 @@
 
 ## v1.0.0
 
-1. 由@ZhaoZh02的图形界面程序和@WaterKing201030的数据采集程序合并得到
+1. 由[@ZhaoZh02](https://github.com/ZhaoZh02)的[数据处理程序](https://github.com/ZhaoZh02/ReynoldsCorrection)和[@WaterKing201030](https://github.com/WaterKing201030)的[数据采集程序](https://github.com/WaterKing201030/SWC-IID-Combust)合并得到
 
 ## v1.0.3
 
