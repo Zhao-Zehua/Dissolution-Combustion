@@ -1737,7 +1737,7 @@ class App:
         DATA_CONFIG["time_upper_limit"]=time_upper_limit
         DATA_CONFIG["width_height_inches"]=width_height_inches
         DATA_CONFIG["dpi"]=dpi
-        DATA_CONFIG["window"]=ttk.Window(themename="sandstone",title="溶解热-燃烧热数据采集与处理软件 v2.2.0")
+        DATA_CONFIG["window"]=ttk.Window(themename="sandstone",title="溶解热-燃烧热数据采集与处理软件 v2.2.1")
         try:
             if sys.platform.startswith('darwin'):
                 # Mac系统
