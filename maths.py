@@ -316,10 +316,13 @@ def find_start_end_point(csv, code: str, time_lower_limit: int or float, time_up
             platform = True
             count -= 1
         elif std > std_limit and platform == True:
+            """
+            # 会导致非正常数据无法显示图象，暂时删除
             # 排除延后效应的影响
             time_now = csv[index][0]
             while time_now - csv[index][0] < time_lower_limit / 1.0:    # 1.0可调节，越大对延后的校正越弱
                 index -= 1
+            """
             points.append(index)
             platform = False
             count -= 1
