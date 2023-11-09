@@ -4,7 +4,7 @@
 
 ## v1.0.0
 
-1. 由[@ZhaoZh02](https://github.com/ZhaoZh02)的[数据处理程序](https://github.com/ZhaoZh02/ReynoldsCorrection)和[@WaterKing201030](https://github.com/WaterKing201030)的[数据采集程序](https://github.com/WaterKing201030/SWC-IID-Combust)合并得到
+1. 由@ZhaoZh02的图形界面程序和@WaterKing201030的数据采集程序合并得到
 
 ## v1.0.3
 
@@ -50,3 +50,8 @@
 ## v2.2.1
 
 1. 修复了非正常数据无法显示图象的问题
+
+## v.2.2.3
+
+1. 代码格式化
+2. 修改了maths.py中的校正点计算方法

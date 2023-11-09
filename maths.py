@@ -2,17 +2,21 @@
 # 第三方库
 import numpy as np
 from scipy import optimize
+from scipy.integrate import simps
 from scipy.interpolate import BSpline, splrep
 
 # 线性回归
 # 使用scipy
-def linear_regression(csv, Start: int, End: int):
+def linear_regression(csv, Start: int, End: int) -> (float, float, float, float, float):
+    """
+    使用scipy进行线性回归，返回斜率、截距、斜率标准差、截距标准差、R平方
+    """
     def equation(x, k, b):
         return k * x + b
     End += 1    # 植树问题，输入的起止点为闭区间
     N = End - Start # 散点总数
-    x = csv[Start : End, 0] # 获取散点横坐标，左闭右开
-    y = csv[Start : End, 1] # 获取散点纵坐标，左闭右开
+    x = csv[Start:End, 0] # 获取散点横坐标，左闭右开
+    y = csv[Start:End, 1] # 获取散点纵坐标，左闭右开
     popt, pcov = optimize.curve_fit(equation, x, y)    # popt为最优拟合参数，pcov为拟合参数的协方差矩阵
     perr = np.sqrt(np.diag(pcov))   # perr为拟合参数的标准差
     k, b = popt
@@ -43,13 +47,11 @@ def linear_regression(csv, Start: int, End: int):
     return k, b, stddev_k, stddev_b, r_square
 '''
 
-# 定积分
-def integration(x, y, k, b, dx):
-    dS = abs((y - k * x - b) * dx - k * dx * dx * 0.5)  # 定积分，得到绝对面积
-    return dS   # 返回积分结果
-
 # B-样条平滑曲线
 def B_Spline(x, y, dx): # 平滑步长dx
+    """
+    创建B-样条平滑曲线，返回平滑函数
+    """
     # 计算B-样条的节点和系数
     t, c, k = splrep(x, y)
     # 创建平滑函数
@@ -57,6 +59,52 @@ def B_Spline(x, y, dx): # 平滑步长dx
     return smooth   # 返回平滑函数
 
 # 雷诺校正点
+def Reynolds(csv, Start1: int, End1: int, Start2: int, End2: int, dx: float) -> (float, float, float):  # 积分步长dx
+    """
+    计算雷诺校正点，返回雷诺校正点横坐标、积分面积1、积分面积2
+    """
+    # 依据起止点进行线性回归
+    k1, b1 = linear_regression(csv, Start1, End1)[0:2]
+    k2, b2 = linear_regression(csv, Start2, End2)[0:2]
+    # 平滑曲线拟合
+    x_csv = csv[End1:(Start2 + 1), 0] # 读取横坐标，类型为array
+    y_csv = csv[End1:(Start2 + 1), 1] # 读取纵坐标，类型为array
+    smooth = B_Spline(x_csv, y_csv, dx) # 创建平滑函数
+    x_smooth = np.arange(x_csv.min(), x_csv.max(), dx)  # 生成平滑曲线横坐标
+    """
+    由2020级怎苏昂同学提供
+    1/2 * k * x0^2 + b * x0 - total_integral = 0
+    in which:
+        k = k2 - k1
+        b = b2 - b1
+        total_integral = \int_{End1}^{Start2}(k2 * x + b2 - smooth(x)) dx + 1/2 * k * x_csv.min()^2 + b * x_csv.min()
+    """
+    def integral_function(x, k2, b2, smooth):
+        return k2 * x + b2 - smooth(x)
+    k = k2 - k1
+    b = b2 - b1
+    integral = simps(integral_function(x_smooth, k2, b2, smooth), x_smooth)
+    total_integral = integral + 1/2 * k * x_csv.min() ** 2 + b * x_csv.min()
+    x0_1, x0_2 = np.roots([1/2 * k, b, -total_integral])
+    x0, S1, S2 = 0.0, 0.0, 0.0
+    if x0_1 >= x_csv.min() and x0_1 <= x_csv.max():
+        x0 = x0_1
+    else:
+        x0 = x0_2
+    if x0 != 0.0:
+        # 计算S1和S2
+        S1 = simps(integral_function(x_smooth[x_smooth <= x0], k1, b1, smooth), x_smooth[x_smooth <= x0])
+        S2 = simps(integral_function(x_smooth[x_smooth >= x0], k2, b2, smooth), x_smooth[x_smooth >= x0])
+    return x0, abs(S1), abs(S2)
+
+"""
+# 已弃用
+
+# 定积分
+def integration(x, y, k, b, dx):
+    dS = abs((y - k * x - b) * dx - k * dx * dx * 0.5)  # 定积分，得到绝对面积
+    return dS   # 返回积分结果
+
 def Reynolds(csv, Start1: int, End1: int, Start2: int, End2: int, dx: float):  # 积分步长dx
     # 依据起止点进行线性回归
     k1, b1 = linear_regression(csv, Start1, End1)[0 : 2]
@@ -84,6 +132,7 @@ def Reynolds(csv, Start1: int, End1: int, Start2: int, End2: int, dx: float):  #
             break
     x0 = x_smooth[equal_point]  # 获取雷诺校正点横坐标
     return x0, S1, S2
+"""
 
 # 溶解热计算
 def calculate_dissolution(parameters: dict):
@@ -149,11 +198,11 @@ def dissolution_heat_regression(dissolution_csv):
     n_p0 = 1 / n_p0
     Qs_p0 = 1 / Qs_p0
     Start, End = 0, len(n) - 1
-    csv = np.stack((n_p0, Qs_p0), axis = 1)
+    csv = np.stack((n_p0, Qs_p0), axis=1)
     k, b, stddev_k, stddev_b, r_square_p0 = linear_regression(csv, Start, End)
     p0 = [1 / b, b / k]
     # 使用scipy非线性拟合确定最优拟合参数
-    popt, pcov = optimize.curve_fit(equation, n, Qs, p0 = p0)    # popt为最优拟合参数，pcov为拟合参数的协方差矩阵
+    popt, pcov = optimize.curve_fit(equation, n, Qs, p0=p0)    # popt为最优拟合参数，pcov为拟合参数的协方差矩阵
     perr = np.sqrt(np.diag(pcov))   # perr为拟合参数的标准差
     Qs0, a = popt
     stddev_Qs0, stddev_a = perr
@@ -203,7 +252,7 @@ def dissolution_heat_regression(dissolution_csv):
     return Qs, n, Qs0, a, stddev_Qs0, stddev_a, r_square
 
 # 积分/微分溶解/冲淡热计算
-def dissolution_heat_test(Qs0, a, n_test = [200, 150, 100, 80, 50]):
+def dissolution_heat_test(Qs0, a, n_test=[200, 150, 100, 80, 50]):
     n_test = np.array(n_test)
     # 积分溶解热
     Qs_int_dissolution = (Qs0 * a * n_test) / (1 + a * n_test)
@@ -218,7 +267,7 @@ def dissolution_heat_test(Qs0, a, n_test = [200, 150, 100, 80, 50]):
     Qs_int_dilution = np.round(np.abs(Qs_int_dilution), 2)
     Qs_diff_dissolution = np.round(Qs_diff_dissolution, 2)
     Qs_diff_dilution = np.round(Qs_diff_dilution, 2)
-    Qs_int_dilution = np.concatenate((["NA"], Qs_int_dilution), axis = 0)
+    Qs_int_dilution = np.concatenate((["NA"], Qs_int_dilution), axis=0)
     '''
     n_test = np.concatenate((["n0"], n_test), axis = 0)
     Qs_int_dissolution = np.concatenate((["int_dissolution(kJ/mol)"], Qs_int_dissolution), axis = 0)
@@ -228,7 +277,7 @@ def dissolution_heat_test(Qs0, a, n_test = [200, 150, 100, 80, 50]):
     '''
     # 拼接为表格并格式化
     title = ["n0", "Qs(kJ/mol)", "Qd(J/mol)", "Qs'_n2(kJ/mol)", "Qs'_n0(J/mol)"]
-    data = np.stack((n_test, Qs_int_dissolution, Qs_int_dilution, Qs_diff_dissolution, Qs_diff_dilution), axis = 1)
+    data = np.stack((n_test, Qs_int_dissolution, Qs_int_dilution, Qs_diff_dissolution, Qs_diff_dilution), axis=1)
     data = np.vstack((title, data))
 
     return data
