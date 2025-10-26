@@ -377,5 +377,5 @@ def find_start_end_point(csv, code: str, time_lower_limit: int or float, time_up
             count -= 1
         if count == 2:
             break
-    points.append(len(csv) - 1)
+    points = points + [len(csv) - i for i in range(count - 1, 1, -1)]
     return points

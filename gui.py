@@ -528,11 +528,13 @@ class SpinEntriesWidget(ttk.Frame):
     def remake_file(self):
         # 更新输入框的值
         self.start_end_points_list = maths.find_start_end_point(DATA_CONFIG["csv"], DATA_CONFIG["mode"].get(), DATA_CONFIG['time_lower_limit'], DATA_CONFIG['time_upper_limit'], DATA_CONFIG['std_limit'])
-        if self.start_end_points_list is None: return 
+        if self.start_end_points_list is None:
+            showwarning("警告", "未找到平台期")
+            return
         self.start_end_points_dict = {}
         DATA_CONFIG["screen"].start_end_points_dict = self.start_end_points_dict
         for i, point in enumerate(self.start_end_points_list):
-            self.start_end_points_dict[f"{'End' if i&1 else 'Start'} {(i>>1)+1}"] = point
+            self.start_end_points_dict[f"{'End' if i & 1 else 'Start'} {(i >> 1) + 1}"] = point
         for i in range(self.PAIRS+1):
             if f"End {i}" not in self.start_end_points_dict:
                 if i == 0:
@@ -540,19 +542,19 @@ class SpinEntriesWidget(ttk.Frame):
                 elif i == self.PAIRS:
                     self.start_end_points_dict[f"End {i}"] = DATA_CONFIG["csv_len"]-1
                 else:
-                    self.start_end_points_dict[f"End {i}"] = int(DATA_CONFIG["csv_len"]*(i*2-1)/(self.PAIRS*2-1))
-            if f"Start {i+1}" not in self.start_end_points_dict:
+                    self.start_end_points_dict[f"End {i}"] = int(DATA_CONFIG["csv_len"] * (i * 2 - 1) / (self.PAIRS * 2 - 1))
+            if f"Start {i + 1}" not in self.start_end_points_dict:
                 if i == self.PAIRS:
-                    self.start_end_points_dict[f"Start {i+1}"] = DATA_CONFIG["csv_len"]
+                    self.start_end_points_dict[f"Start {i + 1}"] = DATA_CONFIG["csv_len"]
                 else:
-                    self.start_end_points_dict[f"Start {i+1}"] = int(DATA_CONFIG["csv_len"]*(i*2)/(self.PAIRS*2-1))
-        for i in range(1, self.PAIRS+1):
+                    self.start_end_points_dict[f"Start {i + 1}"] = int(DATA_CONFIG["csv_len"] * (i * 2) / (self.PAIRS * 2 - 1))
+        for i in range(1, self.PAIRS + 1):
             self.set_var(f"Start {i}", str(self.start_end_points_dict[f"Start {i}"]))
             self.set_var(f"End {i}", str(self.start_end_points_dict[f"End {i}"]))
         self.set_states("normal")
-        for i in range(1, self.PAIRS+1):
-            self.set_from_to(f"Start {i}", self.start_end_points_dict[f"End {i-1}"]+1, self.start_end_points_dict[f"End {i}"]-1)
-            self.set_from_to(f"End {i}", self.start_end_points_dict[f"Start {i}"]+1, self.start_end_points_dict[f"Start {i+1}"]-1)
+        for i in range(1, self.PAIRS + 1):
+            self.set_from_to(f"Start {i}", self.start_end_points_dict[f"End {i - 1}"] + 1, self.start_end_points_dict[f"End {i}"] - 1)
+            self.set_from_to(f"End {i}", self.start_end_points_dict[f"Start {i}"] + 1, self.start_end_points_dict[f"Start {i + 1}"] - 1)
         # 线性回归
         DATA_CONFIG["screen"].change_entry()
         DATA_CONFIG["screen"].calc_regression()
@@ -1737,7 +1739,7 @@ class App:
         DATA_CONFIG["time_upper_limit"] = time_upper_limit
         DATA_CONFIG["width_height_inches"] = width_height_inches
         DATA_CONFIG["dpi"] = dpi
-        DATA_CONFIG["window"] = ttk.Window(themename="sandstone", title="溶解热-燃烧热数据采集与处理软件 v2.2.3")
+        DATA_CONFIG["window"] = ttk.Window(themename="sandstone", title="溶解热-燃烧热数据采集与处理软件 v2.2.4")
         try:
             if sys.platform.startswith('darwin'):
                 # Mac系统
